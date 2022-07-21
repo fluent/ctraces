@@ -24,17 +24,37 @@
 #include <ctraces/ctr_info.h>
 #include <ctraces/ctr_version.h>
 #include <ctraces/ctr_log.h>
+#include <ctraces/ctr_sds.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
+/* ctrace options creation keys */
+#define CTR_OPTS_TRACE_ID   0
+
+struct ctrace_opts {
+    ctr_sds_t  trace_id;
+};
+
 struct ctrace {
+    /* trace context */
+    ctr_sds_t trace_id;
+
     /* logging */
     int log_level;
     void (*log_cb)(void *, int, const char *, int, const char *);
 };
 
-struct ctrace *ctr_create();
+struct ctrace_span {
+
+};
+
+struct ctrace *ctr_create(struct ctrace_opts *opts);
 void ctr_destroy(struct ctrace *ctx);
+
+/* options */
+void ctr_opts_init(struct ctrace_opts *opts);
+void ctr_opts_set(struct ctrace_opts *opts, int value, char *val);
+void ctr_opts_exit(struct ctrace_opts *opts);
 
 #endif

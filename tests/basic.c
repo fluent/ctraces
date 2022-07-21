@@ -20,17 +20,42 @@
 #include <ctraces/ctraces.h>
 #include "ctr_tests.h"
 
+#define OPTS_TRACE_ID  "4582829a12781"
+
 void test_basic()
 {
     struct ctrace *ctx;
 
-    ctx = ctr_create();
+    ctx = ctr_create(NULL);
     TEST_CHECK(ctx != NULL);
 
     ctr_destroy(ctx);
 }
 
+void test_options()
+{
+    struct ctrace *ctx;
+    struct ctrace_opts opts;
+
+    /* options */
+    ctr_opts_init(&opts);
+    ctr_opts_set(&opts, CTR_OPTS_TRACE_ID, OPTS_TRACE_ID);
+    TEST_CHECK(strcmp(opts.trace_id, OPTS_TRACE_ID) == 0);
+
+    /* create & destroy context */
+    ctx = ctr_create(&opts);
+
+    TEST_CHECK(ctx != NULL);
+    TEST_CHECK(strcmp(ctx->trace_id, OPTS_TRACE_ID) == 0);
+
+    ctr_destroy(ctx);
+
+    /* exit options */
+    ctr_opts_exit(&opts);
+}
+
 TEST_LIST = {
     {"basic", test_basic},
+    {"options", test_options},
     { 0 }
 };
