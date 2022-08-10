@@ -46,6 +46,10 @@ jobs:
         with:
             submodules: true
 
+      - name: Checkout submodules
+        run: |
+          git submodule update --init --recursive
+
       - name: Run compilation
         run: |
           cmake3 -DCTR_TESTS=on -DCTR_DEV=on .
