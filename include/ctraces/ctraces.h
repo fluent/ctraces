@@ -23,13 +23,15 @@
 #define CTR_FALSE   0
 #define CTR_TRUE    !CTR_FALSE
 
+/* local libs */
+#include <cfl/cfl.h>
+
 /* headers that are needed in general */
 #include <ctraces/ctr_info.h>
 #include <ctraces/ctr_version.h>
+#include <ctraces/ctr_span.h>
 #include <ctraces/ctr_log.h>
 
-/* local libs */
-#include <cfl/cfl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
