@@ -185,6 +185,10 @@ void ctr_span_destroy(struct ctrace_span *span)
         cfl_sds_destroy(span->name);
     }
 
+    if (span->attributes) {
+        cfl_kvlist_destroy(span->attributes);
+    }
+
     /* events */
     cfl_list_foreach_safe(head, tmp, &span->events) {
         event = cfl_list_entry(head, struct ctrace_span_event, _head);
