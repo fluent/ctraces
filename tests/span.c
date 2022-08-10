@@ -20,6 +20,10 @@
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_span.h>
 
+#include <cfl/cfl.h>
+#include <cfl/cfl_array.h>
+#include <cfl/cfl_kvlist.h>
+
 #include "ctr_tests.h"
 
 void test_span()
@@ -28,6 +32,8 @@ void test_span()
     struct ctrace *ctx;
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
+    struct cfl_array *array;
+    struct cfl_kvlist *kvlist;
 
     ctx = ctr_create(NULL);
 
@@ -45,6 +51,21 @@ void test_span()
 
     /* parent id check */
     TEST_CHECK(span_child->parent_span_id == span_root->id);
+
+    /* add attributes to span_child */
+    ctr_span_set_attribute_string(span_child, "agent", "fluent bit");
+    ctr_span_set_attribute_bool(span_child, "bool_t", 1);
+    ctr_span_set_attribute_bool(span_child, "bool_f", 0);
+    ctr_span_set_attribute_int(span_child, "integer", 123456789);
+    ctr_span_set_attribute_double(span_child, "double", 1.5);
+
+    array = cfl_array_create(128);
+    TEST_CHECK(array != NULL);
+    ctr_span_set_attribute_array(span_child, "array", array);
+
+    kvlist = cfl_kvlist_create();
+    TEST_CHECK(kvlist != NULL);
+    ctr_span_set_attribute_kvlist(span_child, "kvlist", kvlist);
 
     ctr_destroy(ctx);
 }
