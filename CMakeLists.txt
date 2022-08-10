@@ -40,10 +40,12 @@ endif()
 # Configuration options
 option(CTR_DEV             "Enable development mode"                   No)
 option(CTR_TESTS           "Enable unit testing"                       No)
+option(CTR_EXAMPLES        "Build example binaries"                    No)
 option(CTR_INSTALL_TARGETS "Enable subdirectory library installations" Yes)
 
 if(CTR_DEV)
   set(CTR_TESTS        Yes)
+  set(CTR_EXAMPLES     Yes)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
@@ -178,6 +180,11 @@ endif()
 # Source code
 add_subdirectory(include)
 add_subdirectory(src)
+
+# Examples
+if (CTR_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 # Tests
 if(CTR_TESTS)
