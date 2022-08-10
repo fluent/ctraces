@@ -18,7 +18,6 @@
  */
 
 #include <ctraces/ctraces.h>
-#include <ctraces/ctr_sds.h>
 
 void ctr_opts_init(struct ctrace_opts *opts)
 {
@@ -28,7 +27,7 @@ void ctr_opts_init(struct ctrace_opts *opts)
 void ctr_opts_set(struct ctrace_opts *opts, int value, char *val)
 {
     if (value == CTR_OPTS_TRACE_ID) {
-        opts->trace_id = ctr_sds_create(val);
+        opts->trace_id = cfl_sds_create(val);
     }
 }
 
@@ -40,7 +39,7 @@ void ctr_opts_exit(struct ctrace_opts *opts)
     }
 
     if (opts->trace_id) {
-        ctr_sds_destroy(opts->trace_id);
+        cfl_sds_destroy(opts->trace_id);
     }
 }
 
@@ -54,12 +53,14 @@ struct ctrace *ctr_create(struct ctrace_opts *opts)
         ctr_errno();
         return NULL;
     }
+    cfl_list_init(&ctx->spans);
 
     if (opts) {
         if (opts->trace_id) {
-            ctx->trace_id = ctr_sds_create(opts->trace_id);
+            ctx->trace_id = cfl_sds_create(opts->trace_id);
         }
     }
+
 
     return ctx;
 }
@@ -67,7 +68,7 @@ struct ctrace *ctr_create(struct ctrace_opts *opts)
 void ctr_destroy(struct ctrace *ctx)
 {
     if (ctx->trace_id) {
-        ctr_sds_destroy(ctx->trace_id);
+        cfl_sds_destroy(ctx->trace_id);
     }
 
     free(ctx);

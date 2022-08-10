@@ -24,7 +24,7 @@ if(NOT MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 endif()
 
-# CMetrics Version
+# CTraces Version
 set(CTR_VERSION_MAJOR  0)
 set(CTR_VERSION_MINOR  1)
 set(CTR_VERSION_PATCH  0)
@@ -43,8 +43,12 @@ option(CTR_TESTS           "Enable unit testing"                       No)
 option(CTR_INSTALL_TARGETS "Enable subdirectory library installations" Yes)
 
 if(CTR_DEV)
-  set(CTR_TESTS   Yes)
+  set(CTR_TESTS        Yes)
+  set(CMAKE_BUILD_TYPE Debug)
 endif()
+
+# Bundled libraries
+include(cmake/libraries.cmake)
 
 # Include headers and dependency headers
 include_directories(
@@ -112,6 +116,18 @@ check_c_source_compiles("
      return 0;
   }" CTR_HAVE_MSGPACK)
 
+# Check if 'C Floppy' library is available in the environment, if not,
+# we will try to build a local copy at a later stage
+check_c_source_compiles("
+  #include <cfl/cfl.h>
+  int main() {
+     cfl_init();
+     return 0;
+  }" CTR_HAVE_CFL)
+if(CTR_HAVE_CFL)
+  CTR_DEFINITION(CTR_HAVE_CFL)
+endif()
+
 configure_file(
   "${PROJECT_SOURCE_DIR}/include/ctraces/ctr_info.h.in"
   "${PROJECT_SOURCE_DIR}/include/ctraces/ctr_info.h"
@@ -151,10 +167,17 @@ if(NOT TARGET mpack-static)
   endif()
 endif()
 
+# C Floppy
+if (NOT CTR_HAVE_CFL)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${CTR_PATH_LIB_CFL}/include)
+  add_subdirectory(lib/cfl)
+  CTR_DEFINITION(CTR_HAVE_CFL)
+  CTR_DEFINITION(CTR_HAVE_CFL_INTERNAL)
+endif()
+
 # Source code
 add_subdirectory(include)
 add_subdirectory(src)
-add_subdirectory(lib/monkey/include)
 
 # Tests
 if(CTR_TESTS)

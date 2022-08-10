@@ -22,6 +22,5 @@
 
 #include "lib/acutest/acutest.h"
 //#include "tests/ctr_tests_config.h"
-#include <ctraces/ctr_sds.h>
 
 #endif

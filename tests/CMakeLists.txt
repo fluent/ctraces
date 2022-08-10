@@ -1,5 +1,6 @@
 set(UNIT_TESTS_FILES
   basic.c
+  span.c
   )
 
 set(CTR_TESTS_DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/data")

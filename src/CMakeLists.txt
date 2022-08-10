@@ -1,13 +1,13 @@
 set(src
   ctraces.c
+  ctr_span.c
   ctr_log.c
-  ctr_sds.c
   ctr_utils.c
   )
 
 # Static Library
 add_library(ctraces-static STATIC ${src})
-target_link_libraries(ctraces-static mpack-static)
+target_link_libraries(ctraces-static mpack-static cfl-static)
 
 # Install Library
 if(MSVC)

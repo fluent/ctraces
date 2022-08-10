@@ -20,11 +20,16 @@
 #ifndef CTR_H
 #define CTR_H
 
+#define CTR_FALSE   0
+#define CTR_TRUE    !CTR_FALSE
+
 /* headers that are needed in general */
 #include <ctraces/ctr_info.h>
 #include <ctraces/ctr_version.h>
 #include <ctraces/ctr_log.h>
-#include <ctraces/ctr_sds.h>
+
+/* local libs */
+#include <cfl/cfl.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,20 +38,23 @@
 #define CTR_OPTS_TRACE_ID   0
 
 struct ctrace_opts {
-    ctr_sds_t  trace_id;
+    cfl_sds_t  trace_id;
 };
 
 struct ctrace {
     /* trace context */
-    ctr_sds_t trace_id;
+    cfl_sds_t trace_id;
+
+    /*
+     * last_span_id represents the higher span id number assigned, every time
+     * a new span is created this value gets incremented.
+     */
+    uint64_t last_span_id;
+    struct cfl_list spans;
 
     /* logging */
     int log_level;
     void (*log_cb)(void *, int, const char *, int, const char *);
-};
-
-struct ctrace_span {
-
 };
 
 struct ctrace *ctr_create(struct ctrace_opts *opts);
