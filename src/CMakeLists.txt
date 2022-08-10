@@ -3,6 +3,8 @@ set(src
   ctr_span.c
   ctr_log.c
   ctr_utils.c
+  # encoders
+  ctr_encode_text.c
   )
 
 # Static Library

@@ -32,6 +32,8 @@
 #include <ctraces/ctr_span.h>
 #include <ctraces/ctr_log.h>
 
+/* encoders */
+#include <ctraces/ctr_encode_text.h>
 
 #include <stdio.h>
 #include <stdlib.h>

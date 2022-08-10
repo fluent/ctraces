@@ -4,6 +4,7 @@
 
 int main()
 {
+    char *text;
     struct ctrace *ctx;
     struct ctrace_opts opts;
     struct ctrace_span *span_root;
@@ -43,6 +44,10 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+
+    text = ctr_encode_text_create(ctx);
+    printf("--->\n%s\n", text);
+    ctr_encode_text_destroy(text);
 
     /* destroy the context */
     ctr_destroy(ctx);
