@@ -37,11 +37,11 @@ void test_span()
 
     ctx = ctr_create(NULL);
 
-    span_root = ctr_span_create(ctx, NULL);
+    span_root = ctr_span_create(ctx, "main", NULL);
     TEST_CHECK(span_root != NULL);
     TEST_CHECK(span_root->kind == CTRACE_SPAN_INTERNAL  );
 
-    span_child = ctr_span_create(ctx, span_root);
+    span_child = ctr_span_create(ctx, "do-work", span_root);
     TEST_CHECK(span_child != NULL);
 
     /* set span kind */

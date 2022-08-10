@@ -23,6 +23,7 @@
 #include <ctraces/ctraces.h>
 #include <cfl/cfl_array.h>
 
+
 /*
  * OpenTelemetry Span Kinds
  * ------------------------
@@ -78,7 +79,9 @@ struct ctrace_span {
     struct ctrace *ctx;            /* parent ctrace context */
 };
 
-struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_span *parent);
+struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
+                                    struct ctrace_span *parent);
+
 void ctr_span_destroy(struct ctrace_span *span);
 
 /* attributes */

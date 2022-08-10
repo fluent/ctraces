@@ -31,13 +31,23 @@ static void span_register(struct ctrace *ctx, struct ctrace_span *span)
     span->id = ctx->last_span_id;
 }
 
-struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_span *parent)
+struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
+                                    struct ctrace_span *parent)
 {
     struct ctrace_span *span;
+
+    if (!name) {
+        return NULL;
+    }
 
     span = calloc(1, sizeof(struct ctrace_span));
     if (!span) {
         ctr_errno();
+        return NULL;
+    }
+    span->name = cfl_sds_create(name);
+    if (!span->name) {
+        free(span);
         return NULL;
     }
 
