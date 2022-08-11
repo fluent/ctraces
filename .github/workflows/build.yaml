@@ -35,7 +35,7 @@ jobs:
         run: |
           yum -y update && \
           yum install -y rpm-build curl ca-certificates gcc gcc-c++ cmake make bash \
-                        wget unzip systemd-devel wget flex bison \
+                        wget unzip systemd-devel wget flex bison git \
                         cyrus-sasl-lib cyrus-sasl-devel openssl openss-libs openssl-devel \
                         postgresql-libs postgresql-devel postgresql-server postgresql && \
           wget http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
@@ -45,10 +45,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
             submodules: true
-
-      - name: Checkout submodules
-        run: |
-          git submodule update --init --recursive
 
       - name: Run compilation
         run: |
@@ -67,6 +63,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
             submodules: true
+
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         uses: uraimo/run-on-arch-action@v2.2.0
         with:
@@ -78,13 +75,14 @@ jobs:
             build-essential \
             cmake \
             file \
-            make 
+            make
             export CC=${{ env.compiler }}
             cmake -DCTR_TESTS=On .
             make all
             CTEST_OUTPUT_ON_FAILURE=1 make test
         env:
           CC: ${{ matrix.compiler }}
+
   build-unix-amd64:
     name: Build sources on amd64 for ${{ matrix.os }} - ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
@@ -97,6 +95,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
             submodules: true
+
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         run: |
           echo "CC = $CC, CXX = $CXX"
