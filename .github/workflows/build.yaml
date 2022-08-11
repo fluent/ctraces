@@ -47,11 +47,9 @@ jobs:
           yum install -y cmake3
         shell: bash
 
-      - uses: actions/checkout@v3
-
-      - name: Checkout submodules
+      - name: Clone repo with submodules (1.8.3 version of Git)
         run: |
-          git submodule update --init --recursive
+          git clone --recursive https://github.com/calyptia/ctraces.git
         shell: bash
 
       - name: Run compilation
@@ -59,6 +57,7 @@ jobs:
           cmake3 -DCTR_TESTS=on -DCTR_DEV=on .
           make
         shell: bash
+        working-directory: ctraces
 
   build-unix-arm64:
     name: Build sources on arm64 for ${{ matrix.os }} - ${{ matrix.compiler }}
