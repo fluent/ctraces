@@ -15,6 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, windows-2019]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
@@ -50,6 +52,7 @@ jobs:
       - name: Checkout submodules
         run: |
           git submodule update --init --recursive
+        shell: bash
 
       - name: Run compilation
         run: |
@@ -65,6 +68,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         compiler: [ gcc, clang ]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
@@ -97,6 +102,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         compiler: [ gcc, clang ]
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
