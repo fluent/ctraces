@@ -19,6 +19,8 @@ jobs:
         format: [ rpm, deb ]
     steps:
       - uses: actions/checkout@v2
+        with:
+            submodules: true
       - uses: uraimo/run-on-arch-action@v2.2.0
         name: Build the ${{matrix.format}} packages
         with:
@@ -52,6 +54,8 @@ jobs:
     runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v2
+        with:
+            submodules: true
       - name: Build the ${{matrix.format}} packages
         run:  |
           cmake .
