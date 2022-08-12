@@ -30,6 +30,7 @@
 #include <ctraces/ctr_info.h>
 #include <ctraces/ctr_version.h>
 #include <ctraces/ctr_span.h>
+#include <ctraces/ctr_attributes.h>
 #include <ctraces/ctr_log.h>
 
 /* encoders */

@@ -18,7 +18,6 @@
  */
 
 #include <ctraces/ctraces.h>
-#include <ctraces/ctr_span.h>
 
 #include <cfl/cfl.h>
 #include <cfl/cfl_time.h>
@@ -51,8 +50,8 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
         return NULL;
     }
 
-    span->attributes = cfl_kvlist_create();
-    if (!span->attributes) {
+    span->attr = ctr_attributes_create();
+    if (!span->attr) {
         free(span);
         return NULL;
     }
@@ -109,69 +108,41 @@ char *ctr_span_kind_string(struct ctrace_span *span)
     };
 }
 
-int ctr_span_event_add(struct ctrace_span *span, char *name,
-                       void *attributes, void *links)
-{
-    struct ctrace_span_event *ev;
-
-    if (!name) {
-        return -1;
-    }
-
-    ev = calloc(1, sizeof(struct ctrace_span_event));
-    if (!ev) {
-        ctr_errno();
-        return -1;
-    }
-    ev->name = cfl_sds_create(name);
-
-    return 0;
-}
-
+/*
+ * Span attributes
+ * ---------------
+ */
 int ctr_span_set_attribute_string(struct ctrace_span *span, char *key, char *value)
 {
-    return cfl_kvlist_insert_string(span->attributes, key, value);
+    return ctr_attributes_set_string(span->attr, key, value);
 }
 
 int ctr_span_set_attribute_bool(struct ctrace_span *span, char *key, int b)
 {
-    if (b != CTR_TRUE && b != CTR_FALSE) {
-        return -1;
-    }
-
-    return cfl_kvlist_insert_bool(span->attributes, key, b);
+    return ctr_attributes_set_bool(span->attr, key, b);
 }
 
 int ctr_span_set_attribute_int(struct ctrace_span *span, char *key, int value)
 {
-    return cfl_kvlist_insert_int(span->attributes, key, value);
+    return ctr_attributes_set_int(span->attr, key, value);
 }
 
 int ctr_span_set_attribute_double(struct ctrace_span *span, char *key, double value)
 {
-    return cfl_kvlist_insert_double(span->attributes, key, value);
+    return ctr_attributes_set_double(span->attr, key, value);
 }
 
 int ctr_span_set_attribute_array(struct ctrace_span *span, char *key,
                                  struct cfl_array *value)
 {
-    return cfl_kvlist_insert_array(span->attributes, key, value);
+    return ctr_attributes_set_array(span->attr, key, value);
 }
 
 int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
                                   struct cfl_kvlist *value)
 {
 
-    return cfl_kvlist_insert_kvlist(span->attributes, key, value);
-}
-
-void ctr_span_event_delete(struct ctrace_span_event *event)
-{
-    if (event->name) {
-        cfl_sds_destroy(event->name);
-    }
-    cfl_list_del(&event->_head);
-    free(event);
+    return ctr_attributes_set_kvlist(span->attr, key, value);
 }
 
 void ctr_span_start(struct ctrace *ctx, struct ctrace_span *span)
@@ -195,8 +166,8 @@ void ctr_span_destroy(struct ctrace_span *span)
         cfl_sds_destroy(span->name);
     }
 
-    if (span->attributes) {
-        cfl_kvlist_destroy(span->attributes);
+    if (span->attr) {
+        ctr_attributes_destroy(span->attr);
     }
 
     /* events */
@@ -214,3 +185,72 @@ void ctr_span_destroy(struct ctrace_span *span)
     cfl_list_del(&span->_head);
     free(span);
 }
+
+/*
+ * Span Events
+ * -----------
+ */
+struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name)
+{
+    struct ctrace_span_event *ev;
+
+    if (!name) {
+        return NULL;
+    }
+
+    ev = calloc(1, sizeof(struct ctrace_span_event));
+    if (!ev) {
+        ctr_errno();
+        return NULL;
+    }
+    ev->name = cfl_sds_create(name);
+    if (!ev->name) {
+        free(ev);
+        return NULL;
+    }
+
+    return ev;
+}
+
+int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value)
+{
+    return ctr_attributes_set_string(event->attr, key, value);
+}
+
+int ctr_span_event_set_attribute_bool(struct ctrace_span_event *event, char *key, int b)
+{
+    return ctr_attributes_set_bool(event->attr, key, b);
+}
+
+int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value)
+{
+    return ctr_attributes_set_int(event->attr, key, value);
+}
+
+int ctr_span_event_set_attribute_double(struct ctrace_span_event *event, char *key, double value)
+{
+    return ctr_attributes_set_double(event->attr, key, value);
+}
+
+int ctr_span_event_set_attribute_array(struct ctrace_span_event *event, char *key,
+                                       struct cfl_array *value)
+{
+    return ctr_attributes_set_array(event->attr, key, value);
+}
+
+int ctr_span_event_set_attribute_kvlist(struct ctrace_span_event *event, char *key,
+                                        struct cfl_kvlist *value)
+{
+
+    return ctr_attributes_set_kvlist(event->attr, key, value);
+}
+
+void ctr_span_event_delete(struct ctrace_span_event *event)
+{
+    if (event->name) {
+        cfl_sds_destroy(event->name);
+    }
+    cfl_list_del(&event->_head);
+    free(event);
+}
+

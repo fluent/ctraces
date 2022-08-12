@@ -9,6 +9,7 @@ int main()
     struct ctrace_opts opts;
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
+    struct ctrace_span_event *event;
 
     /*
      * create an options context: this is used to initialize a CTrace context only,
@@ -24,7 +25,7 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    /* Create a span (root span) */
+    /* Create a root span */
     span_root = ctr_span_create(ctx, "main", NULL);
     if (!span_root) {
         ctr_destroy(ctx);
@@ -36,6 +37,13 @@ int main()
     ctr_span_set_attribute_string(span_root, "agent", "Fluent Bit");
     ctr_span_set_attribute_int(span_root, "year", 2022);
     ctr_span_set_attribute_bool(span_root, "open_source", CTR_TRUE);
+
+    /* add one event and set attributes to it */
+    event = ctr_span_event_add(span_root, "something");
+    ctr_span_event_set_attribute_string(event, "syscall", "open()");
+    ctr_span_event_set_attribute_string(event, "syscall", "connect()");
+    ctr_span_event_set_attribute_string(event, "syscall", "write()");
+
 
     /* create a child span */
     span_child = ctr_span_create(ctx, "do-work", span_root);

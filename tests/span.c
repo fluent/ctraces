@@ -37,6 +37,7 @@ void test_span()
 
     ctx = ctr_create(NULL);
 
+    /* create root span */
     span_root = ctr_span_create(ctx, "main", NULL);
     TEST_CHECK(span_root != NULL);
     TEST_CHECK(span_root->kind == CTRACE_SPAN_INTERNAL  );

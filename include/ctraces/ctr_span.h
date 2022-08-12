@@ -46,8 +46,8 @@ struct ctrace_span_event {
     cfl_sds_t name;
     uint64_t timestamp;
 
-    /* fixme: implement it! */
-    struct cfl_kvlist *attributes;
+    /* event attributes */
+    struct ctr_attributes *attr;
 
     /* fixme: implement it! */
     void *links;
@@ -66,7 +66,7 @@ struct ctrace_span {
 
     cfl_sds_t name;                /* user-name assigned */
 
-    struct cfl_kvlist *attributes; /* attributes */
+    struct ctr_attributes *attr;   /* attributes */
     struct cfl_list events;        /* events */
     struct cfl_list childs;        /* list of child spans */
 
@@ -95,8 +95,7 @@ int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
                                   struct cfl_kvlist *value);
 
 /* events */
-int ctr_span_event_add(struct ctrace_span *span, char *name,
-                       void *attributes, void *links);
+struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name);
 void ctr_span_event_delete(struct ctrace_span_event *event);
 
 /* time */
@@ -107,5 +106,14 @@ void ctr_span_end(struct ctrace *ctx, struct ctrace_span *span);
 int ctr_span_kind_set(struct ctrace_span *span, int kind);
 char *ctr_span_kind_string(struct ctrace_span *span);
 
+/* span events */
+int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value);
+int ctr_span_event_set_attribute_bool(struct ctrace_span_event *event, char *key, int b);
+int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value);
+int ctr_span_event_set_attribute_double(struct ctrace_span_event *event, char *key, double value);
+int ctr_span_event_set_attribute_array(struct ctrace_span_event *event, char *key,
+                                       struct cfl_array *value);
+int ctr_span_event_set_attribute_kvlist(struct ctrace_span_event *event, char *key,
+                                        struct cfl_kvlist *value);
 
 #endif
