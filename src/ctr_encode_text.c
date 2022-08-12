@@ -64,9 +64,7 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
 
 cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
 {
-    int span_levels = 0;
     cfl_sds_t buf;
-    cfl_sds_t tmp;
     struct cfl_list *head;
     struct ctrace_span *span;
 
