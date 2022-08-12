@@ -36,18 +36,12 @@
 #define CTRACE_SPAN_PRODUCER      4
 #define CTRACE_SPAN_CONSUMER      5
 
-struct ctrace_span_attribute {
-    cfl_sds_t name;
-    struct cfl_variant *value;
-    struct cfl_list _head;
-};
-
 struct ctrace_span_event {
     cfl_sds_t name;
     uint64_t timestamp;
 
     /* event attributes */
-    struct ctr_attributes *attr;
+    struct ctrace_attributes *attr;
 
     /* fixme: implement it! */
     void *links;
@@ -57,18 +51,18 @@ struct ctrace_span_event {
 
 /* span context */
 struct ctrace_span {
-    uint64_t id;                   /* the unique span ID    */
-    uint64_t parent_span_id;       /* any parent ?, id=0 means a root span */
+    uint64_t id;                      /* the unique span ID    */
+    uint64_t parent_span_id;          /* any parent ?, id=0 means a root span */
 
-    int kind;                      /* span kind */
-    uint64_t start_time;           /* start time */
-    uint64_t end_time;             /* end time */
+    int kind;                         /* span kind */
+    uint64_t start_time;              /* start time */
+    uint64_t end_time;                /* end time */
 
-    cfl_sds_t name;                /* user-name assigned */
+    cfl_sds_t name;                   /* user-name assigned */
 
-    struct ctr_attributes *attr;   /* attributes */
-    struct cfl_list events;        /* events */
-    struct cfl_list childs;        /* list of child spans */
+    struct ctrace_attributes *attr;   /* attributes */
+    struct cfl_list events;           /* events */
+    struct cfl_list childs;           /* list of child spans */
 
     /*
      * link to parent list. The root span is linked to 'struct ctrace->spans' and
@@ -94,20 +88,23 @@ int ctr_span_set_attribute_array(struct ctrace_span *span, char *key,
 int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
                                   struct cfl_kvlist *value);
 
-/* events */
-struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name);
-struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *name, uint64_t ts);
-void ctr_span_event_delete(struct ctrace_span_event *event);
 
 /* time */
 void ctr_span_start(struct ctrace *ctx, struct ctrace_span *span);
+void ctr_span_start_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts);
+
 void ctr_span_end(struct ctrace *ctx, struct ctrace_span *span);
+void ctr_span_end_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts);
 
 /* kind */
 int ctr_span_kind_set(struct ctrace_span *span, int kind);
 char *ctr_span_kind_string(struct ctrace_span *span);
 
-/* span events */
+/* events */
+struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name);
+struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *name, uint64_t ts);
+void ctr_span_event_delete(struct ctrace_span_event *event);
+
 int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value);
 int ctr_span_event_set_attribute_bool(struct ctrace_span_event *event, char *key, int b);
 int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value);

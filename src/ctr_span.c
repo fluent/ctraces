@@ -147,12 +147,32 @@ int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
 
 void ctr_span_start(struct ctrace *ctx, struct ctrace_span *span)
 {
-    span->start_time = cfl_time_now();
+    uint64_t ts;
+
+    ts = cfl_time_now();
+    ctr_span_start_ts(ctx, span, ts);
+}
+
+void ctr_span_start_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts)
+{
+    /* set the initial timestamp */
+    span->start_time = ts;
+
+    /* always set the span end time as the start time, so duration can be zero */
+    ctr_span_end_ts(ctx, span, ts);
 }
 
 void ctr_span_end(struct ctrace *ctx, struct ctrace_span *span)
 {
-    span->end_time = cfl_time_now();
+    uint64_t ts;
+
+    ts = cfl_time_now();
+    ctr_span_end_ts(ctx, span, ts);
+}
+
+void ctr_span_end_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts)
+{
+    span->end_time = ts;
 }
 
 void ctr_span_destroy(struct ctrace_span *span)
@@ -214,7 +234,11 @@ struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *
     if (ts == 0) {
         ev->timestamp = cfl_time_now();
     }
+    else {
+        ev->timestamp = ts;
+    }
 
+    cfl_list_add(&ev->_head, &span->events);
     return ev;
 }
 
