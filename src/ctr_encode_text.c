@@ -27,12 +27,48 @@ static inline void sds_cat_safe(cfl_sds_t *buf, char *str)
     cfl_sds_cat_safe(buf, str, len);
 }
 
+static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *span, int level)
+{
+    int min;
+    int off = 1 + (level * 4);
+    char tmp[1024];
+    struct ctrace_span *s;
+    struct cfl_list *head;
+
+    min = off + 4;
+
+    sds_cat_safe(buf, "\n");
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s[span '%s']\n", off, "", span->name);
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- kind      : %s\n", min, "", ctr_span_kind_string(span));
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- start_time: %" PRIu64 "\n", min, "", span->start_time);
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- end_time  : %" PRIu64 "\n", min, "", span->end_time);
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- attributes: []\n", min, "");
+    sds_cat_safe(buf, tmp);
+
+
+    /* iterate child spans */
+    cfl_list_foreach(head, &span->childs) {
+        s = cfl_list_entry(head, struct ctrace_span, _head);
+        format_span(buf, ctx, s, ++level);
+    }
+}
+
 cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
 {
     int span_levels = 0;
     cfl_sds_t buf;
     cfl_sds_t tmp;
     struct cfl_list *head;
+    struct ctrace_span *span;
 
     buf = cfl_sds_create_size(1024);
     if (!buf) {
@@ -40,7 +76,7 @@ cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
     }
 
     /* trace id */
-    sds_cat_safe(&buf, "trace-id: ");
+    sds_cat_safe(&buf, "|--------- trace-id: ");
 
     if (ctx->trace_id) {
         sds_cat_safe(&buf, ctx->trace_id);
@@ -48,7 +84,13 @@ cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
     else {
         sds_cat_safe(&buf, "--");
     }
+    sds_cat_safe(&buf, " ---------|\n");
 
+    /* iterate spans */
+    cfl_list_foreach(head, &ctx->spans) {
+        span = cfl_list_entry(head, struct ctrace_span, _head);
+        format_span(&buf, ctx, span, 0);
+    }
 
     return buf;
 }
