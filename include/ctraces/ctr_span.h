@@ -96,6 +96,7 @@ int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
 
 /* events */
 struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name);
+struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *name, uint64_t ts);
 void ctr_span_event_delete(struct ctrace_span_event *event);
 
 /* time */
