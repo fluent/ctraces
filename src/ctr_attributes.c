@@ -19,11 +19,11 @@
 
 #include <ctraces/ctraces.h>
 
-struct ctr_attributes *ctr_attributes_create()
+struct ctrace_attributes *ctr_attributes_create()
 {
-    struct ctr_attributes *attr;
+    struct ctrace_attributes *attr;
 
-    attr = malloc(sizeof(struct ctr_attributes));
+    attr = malloc(sizeof(struct ctrace_attributes));
     if (!attr) {
         ctr_errno();
         return NULL;
@@ -38,7 +38,7 @@ struct ctr_attributes *ctr_attributes_create()
     return attr;
 }
 
-void ctr_attributes_destroy(struct ctr_attributes *attr)
+void ctr_attributes_destroy(struct ctrace_attributes *attr)
 {
     if (attr->kv) {
         cfl_kvlist_destroy(attr->kv);
@@ -46,12 +46,17 @@ void ctr_attributes_destroy(struct ctr_attributes *attr)
     free(attr);
 }
 
-int ctr_attributes_set_string(struct ctr_attributes *attr, char *key, char *value)
+int ctr_attributes_count(struct ctrace_attributes *attr)
+{
+    return cfl_kvlist_count(attr->kv);
+}
+
+int ctr_attributes_set_string(struct ctrace_attributes *attr, char *key, char *value)
 {
     return cfl_kvlist_insert_string(attr->kv, key, value);
 }
 
-int ctr_attributes_set_bool(struct ctr_attributes *attr, char *key, int b)
+int ctr_attributes_set_bool(struct ctrace_attributes *attr, char *key, int b)
 {
     if (b != CTR_TRUE && b != CTR_FALSE) {
         return -1;
@@ -60,23 +65,23 @@ int ctr_attributes_set_bool(struct ctr_attributes *attr, char *key, int b)
     return cfl_kvlist_insert_bool(attr->kv, key, b);
 }
 
-int ctr_attributes_set_int(struct ctr_attributes *attr, char *key, int value)
+int ctr_attributes_set_int(struct ctrace_attributes *attr, char *key, int value)
 {
     return cfl_kvlist_insert_int(attr->kv, key, value);
 }
 
-int ctr_attributes_set_double(struct ctr_attributes *attr, char *key, double value)
+int ctr_attributes_set_double(struct ctrace_attributes *attr, char *key, double value)
 {
     return cfl_kvlist_insert_double(attr->kv, key, value);
 }
 
-int ctr_attributes_set_array(struct ctr_attributes *attr, char *key,
+int ctr_attributes_set_array(struct ctrace_attributes *attr, char *key,
                              struct cfl_array *value)
 {
     return cfl_kvlist_insert_array(attr->kv, key, value);
 }
 
-int ctr_attributes_set_kvlist(struct ctr_attributes *attr, char *key,
+int ctr_attributes_set_kvlist(struct ctrace_attributes *attr, char *key,
                               struct cfl_kvlist *value)
 {
     return cfl_kvlist_insert_kvlist(attr->kv, key, value);

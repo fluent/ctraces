@@ -25,20 +25,20 @@
 #include <cfl/cfl.h>
 #include <cfl/cfl_kvlist.h>
 
-struct ctr_attributes {
+struct ctrace_attributes {
     struct cfl_kvlist *kv;
 };
 
-struct ctr_attributes *ctr_attributes_create();
-void ctr_attributes_destroy(struct ctr_attributes *attr);
-
-int ctr_attributes_set_string(struct ctr_attributes *attr, char *key, char *value);
-int ctr_attributes_set_bool(struct ctr_attributes *attr, char *key, int b);
-int ctr_attributes_set_int(struct ctr_attributes *attr, char *key, int value);
-int ctr_attributes_set_double(struct ctr_attributes *attr, char *key, double value);
-int ctr_attributes_set_array(struct ctr_attributes *attr, char *key,
+struct ctrace_attributes *ctr_attributes_create();
+void ctr_attributes_destroy(struct ctrace_attributes *attr);
+int ctr_attributes_count(struct ctrace_attributes *attr);
+int ctr_attributes_set_string(struct ctrace_attributes *attr, char *key, char *value);
+int ctr_attributes_set_bool(struct ctrace_attributes *attr, char *key, int b);
+int ctr_attributes_set_int(struct ctrace_attributes *attr, char *key, int value);
+int ctr_attributes_set_double(struct ctrace_attributes *attr, char *key, double value);
+int ctr_attributes_set_array(struct ctrace_attributes *attr, char *key,
                              struct cfl_array *value);
-int ctr_attributes_set_kvlist(struct ctr_attributes *attr, char *key,
+int ctr_attributes_set_kvlist(struct ctrace_attributes *attr, char *key,
                               struct cfl_kvlist *value);
 
 #endif
