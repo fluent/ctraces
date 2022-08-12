@@ -54,7 +54,7 @@ int main()
     }
 
     text = ctr_encode_text_create(ctx);
-    printf("--->\n%s\n", text);
+    printf("%s\n", text);
     ctr_encode_text_destroy(text);
 
     /* destroy the context */
