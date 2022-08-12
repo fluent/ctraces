@@ -190,7 +190,7 @@ void ctr_span_destroy(struct ctrace_span *span)
  * Span Events
  * -----------
  */
-struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name)
+struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *name, uint64_t ts)
 {
     struct ctrace_span_event *ev;
 
@@ -208,8 +208,19 @@ struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *nam
         free(ev);
         return NULL;
     }
+    ev->attr = ctr_attributes_create(128);
+
+    /* if no timestamp is given, use the current time */
+    if (ts == 0) {
+        ev->timestamp = cfl_time_now();
+    }
 
     return ev;
+}
+
+struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name)
+{
+    return ctr_span_event_add_ts(span, name, 0);
 }
 
 int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value)
