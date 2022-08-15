@@ -37,7 +37,7 @@ int main()
 
     /* add some attributes to the span */
     ctr_span_set_attribute_string(span_root, "agent", "Fluent Bit");
-    ctr_span_set_attribute_int(span_root, "year", 2022);
+    ctr_span_set_attribute_int64(span_root, "year", 2022);
     ctr_span_set_attribute_bool(span_root, "open_source", CTR_TRUE);
     ctr_span_set_attribute_double(span_root, "temperature", 25.5);
 
