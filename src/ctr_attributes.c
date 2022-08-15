@@ -65,9 +65,9 @@ int ctr_attributes_set_bool(struct ctrace_attributes *attr, char *key, int b)
     return cfl_kvlist_insert_bool(attr->kv, key, b);
 }
 
-int ctr_attributes_set_int(struct ctrace_attributes *attr, char *key, int value)
+int ctr_attributes_set_int64(struct ctrace_attributes *attr, char *key, int64_t value)
 {
-    return cfl_kvlist_insert_int(attr->kv, key, value);
+    return cfl_kvlist_insert_int64(attr->kv, key, value);
 }
 
 int ctr_attributes_set_double(struct ctrace_attributes *attr, char *key, double value)
