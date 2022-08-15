@@ -84,7 +84,7 @@ static void format_array(cfl_sds_t *buf, struct cfl_array *array, int level)
             format_bool(buf, v->data.as_bool, off);
         }
         else if (v->type == CFL_VARIANT_INT) {
-            format_int64(buf, v->data.as_int, off);
+            format_int64(buf, v->data.as_int64, off);
         }
         else if (v->type == CFL_VARIANT_DOUBLE) {
             format_double(buf, v->data.as_double, off);
@@ -129,7 +129,7 @@ static void format_attributes(cfl_sds_t *buf, struct cfl_kvlist *kv, int level)
             format_bool(buf, v->data.as_bool, off);
         }
         else if (v->type == CFL_VARIANT_INT) {
-            format_int64(buf, v->data.as_int, off);
+            format_int64(buf, v->data.as_int64, off);
         }
         else if (v->type == CFL_VARIANT_DOUBLE) {
             format_double(buf, v->data.as_double, off);
