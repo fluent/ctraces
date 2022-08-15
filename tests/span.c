@@ -57,7 +57,7 @@ void test_span()
     ctr_span_set_attribute_string(span_child, "agent", "fluent bit");
     ctr_span_set_attribute_bool(span_child, "bool_t", 1);
     ctr_span_set_attribute_bool(span_child, "bool_f", 0);
-    ctr_span_set_attribute_int(span_child, "integer", 123456789);
+    ctr_span_set_attribute_int64(span_child, "integer", 123456789);
     ctr_span_set_attribute_double(span_child, "double", 1.5);
 
     array = cfl_array_create(128);
