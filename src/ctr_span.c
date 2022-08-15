@@ -122,9 +122,9 @@ int ctr_span_set_attribute_bool(struct ctrace_span *span, char *key, int b)
     return ctr_attributes_set_bool(span->attr, key, b);
 }
 
-int ctr_span_set_attribute_int(struct ctrace_span *span, char *key, int value)
+int ctr_span_set_attribute_int64(struct ctrace_span *span, char *key, int64_t value)
 {
-    return ctr_attributes_set_int(span->attr, key, value);
+    return ctr_attributes_set_int64(span->attr, key, value);
 }
 
 int ctr_span_set_attribute_double(struct ctrace_span *span, char *key, double value)
@@ -257,9 +257,9 @@ int ctr_span_event_set_attribute_bool(struct ctrace_span_event *event, char *key
     return ctr_attributes_set_bool(event->attr, key, b);
 }
 
-int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value)
+int ctr_span_event_set_attribute_int64(struct ctrace_span_event *event, char *key, int64_t value)
 {
-    return ctr_attributes_set_int(event->attr, key, value);
+    return ctr_attributes_set_int64(event->attr, key, value);
 }
 
 int ctr_span_event_set_attribute_double(struct ctrace_span_event *event, char *key, double value)

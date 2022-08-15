@@ -25,9 +25,9 @@
 
 
 /*
- * OpenTelemetry Span Kinds
- * ------------------------
- * https://github.com/open-telemetry/opentelemetry-go/blob/main/trace/trace.go#L423
+ * OpenTelemetry Trace Protobuf defition
+ * -------------------------------------
+ * https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
  */
 #define CTRACE_SPAN_UNSPECIFIED   0
 #define CTRACE_SPAN_INTERNAL      1
@@ -57,6 +57,7 @@ struct ctrace_span {
     int kind;                         /* span kind */
     uint64_t start_time;              /* start time */
     uint64_t end_time;                /* end time */
+    uint32_t dropped_attr_count;      /* number of attributes that were discarded */
 
     cfl_sds_t name;                   /* user-name assigned */
 
@@ -81,7 +82,7 @@ void ctr_span_destroy(struct ctrace_span *span);
 /* attributes */
 int ctr_span_set_attribute_string(struct ctrace_span *span, char *key, char *value);
 int ctr_span_set_attribute_bool(struct ctrace_span *span, char *key, int b);
-int ctr_span_set_attribute_int(struct ctrace_span *span, char *key, int value);
+int ctr_span_set_attribute_int64(struct ctrace_span *span, char *key, int64_t value);
 int ctr_span_set_attribute_double(struct ctrace_span *span, char *key, double value);
 int ctr_span_set_attribute_array(struct ctrace_span *span, char *key,
                                  struct cfl_array *value);
