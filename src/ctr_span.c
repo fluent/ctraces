@@ -55,9 +55,10 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
         free(span);
         return NULL;
     }
-
     cfl_list_init(&span->events);
     cfl_list_init(&span->childs);
+
+    span->dropped_attr_count = 0;
 
     if (parent) {
         /* If a parent span was given, link to the 'childs' list */
@@ -175,17 +176,44 @@ void ctr_span_end_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts)
     span->end_time = ts;
 }
 
+int ctr_span_set_status(struct ctrace_span *span, int code, char *message)
+{
+    struct ctrace_span_status *status;
+
+    status = &span->status;
+    if (status->message) {
+        cfl_sds_destroy(status->message);
+    }
+
+    if (message) {
+        status->message = cfl_sds_create(message);
+        if (!status->message) {
+            return -1;
+        }
+    }
+
+    status->code = code;
+    return 0;
+}
+
+void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n)
+{
+    span->dropped_events_count = n;
+}
+
 void ctr_span_destroy(struct ctrace_span *span)
 {
     struct cfl_list *tmp;
     struct cfl_list *head;
     struct ctrace_span *child;
     struct ctrace_span_event *event;
+    struct ctrace_span_status *status;
 
     if (span->name) {
         cfl_sds_destroy(span->name);
     }
 
+    /* attributes */
     if (span->attr) {
         ctr_attributes_destroy(span->attr);
     }
@@ -200,6 +228,12 @@ void ctr_span_destroy(struct ctrace_span *span)
     cfl_list_foreach_safe(head, tmp, &span->childs) {
         child = cfl_list_entry(head, struct ctrace_span, _head);
         ctr_span_destroy(child);
+    }
+
+    /* status */
+    status = &span->status;
+    if (status->message) {
+        cfl_sds_destroy(status->message);
     }
 
     cfl_list_del(&span->_head);
@@ -229,6 +263,7 @@ struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *
         return NULL;
     }
     ev->attr = ctr_attributes_create(128);
+    ev->dropped_attr_count = 0;
 
     /* if no timestamp is given, use the current time */
     if (ts == 0) {
@@ -280,11 +315,21 @@ int ctr_span_event_set_attribute_kvlist(struct ctrace_span_event *event, char *k
     return ctr_attributes_set_kvlist(event->attr, key, value);
 }
 
+void ctr_span_event_set_dropped_attributes_count(struct ctrace_span_event *event, int n)
+{
+    event->dropped_attr_count = n;
+}
+
 void ctr_span_event_delete(struct ctrace_span_event *event)
 {
     if (event->name) {
         cfl_sds_destroy(event->name);
     }
+
+    if (event->attr) {
+        ctr_attributes_destroy(event->attr);
+    }
+
     cfl_list_del(&event->_head);
     free(event);
 }

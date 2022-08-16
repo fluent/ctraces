@@ -29,6 +29,8 @@
  * -------------------------------------
  * https://github.com/open-telemetry/opentelemetry-proto/blob/main/opentelemetry/proto/trace/v1/trace.proto
  */
+
+/* Span kind */
 #define CTRACE_SPAN_UNSPECIFIED   0
 #define CTRACE_SPAN_INTERNAL      1
 #define CTRACE_SPAN_SERVER        2
@@ -36,9 +38,22 @@
 #define CTRACE_SPAN_PRODUCER      4
 #define CTRACE_SPAN_CONSUMER      5
 
+/* Status code */
+#define CTRACE_SPAN_STATUS_CODE_UNSET  0
+#define CTRACE_SPAN_STATUS_CODE_OK     1
+#define CTRACE_SPAN_STAUTS_CODE_ERROR  2
+
+struct ctrace_span_status {
+    int code;
+    cfl_sds_t message;
+};
+
 struct ctrace_span_event {
     cfl_sds_t name;
     uint64_t timestamp;
+
+    /* number of attributes that were discarded */
+    uint32_t dropped_attr_count;
 
     /* event attributes */
     struct ctrace_attributes *attr;
@@ -58,12 +73,15 @@ struct ctrace_span {
     uint64_t start_time;              /* start time */
     uint64_t end_time;                /* end time */
     uint32_t dropped_attr_count;      /* number of attributes that were discarded */
+    uint32_t dropped_events_count;    /* number of events that were discarded */
 
     cfl_sds_t name;                   /* user-name assigned */
 
     struct ctrace_attributes *attr;   /* attributes */
     struct cfl_list events;           /* events */
     struct cfl_list childs;           /* list of child spans */
+
+    struct ctrace_span_status status; /* status code */
 
     /*
      * link to parent list. The root span is linked to 'struct ctrace->spans' and
@@ -78,6 +96,9 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
                                     struct ctrace_span *parent);
 
 void ctr_span_destroy(struct ctrace_span *span);
+
+int ctr_span_set_status(struct ctrace_span *span, int code, char *message);
+void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n);
 
 /* attributes */
 int ctr_span_set_attribute_string(struct ctrace_span *span, char *key, char *value);
@@ -104,6 +125,7 @@ char *ctr_span_kind_string(struct ctrace_span *span);
 /* events */
 struct ctrace_span_event *ctr_span_event_add(struct ctrace_span *span, char *name);
 struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *name, uint64_t ts);
+void ctr_span_event_set_dropped_attributes_count(struct ctrace_span_event *event, int n);
 void ctr_span_event_delete(struct ctrace_span_event *event);
 
 int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value);
