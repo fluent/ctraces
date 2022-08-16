@@ -152,11 +152,14 @@ static void format_event(cfl_sds_t *buf, struct ctrace_span_event *event, int le
 
     sds_cat_safe(buf, "\n");
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- name          : %s\n", off, "", event->name);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- name: %s\n", off, "", event->name);
     sds_cat_safe(buf, tmp);
     off += 4;
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- timestamp : %" PRIu64 "\n", off, "", event->timestamp);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- timestamp               : %" PRIu64 "\n", off, "", event->timestamp);
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_attributes_count: %" PRIu32 "\n", off, "", event->dropped_attr_count);
     sds_cat_safe(buf, tmp);
 
     if (ctr_attributes_count(event->attr) > 0) {
@@ -187,14 +190,30 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     snprintf(tmp, sizeof(tmp) - 1, "%*s[span '%s']\n", off, "", span->name);
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- kind      : %s\n", min, "", ctr_span_kind_string(span));
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- kind                    : %i (%s)\n", min, "", span->kind, ctr_span_kind_string(span));
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- start_time: %" PRIu64 "\n", min, "", span->start_time);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- start_time              : %" PRIu64 "\n", min, "", span->start_time);
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- end_time  : %" PRIu64 "\n", min, "", span->end_time);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- end_time                : %" PRIu64 "\n", min, "", span->end_time);
     sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_attributes_count: %" PRIu32 "\n", min, "", span->dropped_attr_count);
+    sds_cat_safe(buf, tmp);
+
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_events_count    : %" PRIu32 "\n", min, "", span->dropped_events_count);
+    sds_cat_safe(buf, tmp);
+
+    /* Status */
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- status:\n", min, "");
+    sds_cat_safe(buf, tmp);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- code        : %i\n", min + 4, "", span->status.code);
+    sds_cat_safe(buf, tmp);
+
+    if (span->status.message) {
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- message : '%s'\n", min + 4, "", span->status.message);
+    }
 
     /* span attributes */
     if (ctr_attributes_count(span->attr) == 0) {
