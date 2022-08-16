@@ -67,8 +67,17 @@ struct ctrace *ctr_create(struct ctrace_opts *opts)
 
 void ctr_destroy(struct ctrace *ctx)
 {
+    struct cfl_list *head;
+    struct cfl_list *tmp;
+    struct ctrace_span *span;
+
     if (ctx->trace_id) {
         cfl_sds_destroy(ctx->trace_id);
+    }
+
+    cfl_list_foreach_safe(head, tmp, &ctx->spans) {
+        span = cfl_list_entry(head, struct ctrace_span, _head);
+        ctr_span_destroy(span);
     }
 
     free(ctx);
