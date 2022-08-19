@@ -109,6 +109,19 @@ if(CTR_HAVE_CLOCK_GET_TIME)
   CTR_DEFINITION(CTR_HAVE_CLOCK_GET_TIME)
 endif()
 
+# getrandom()
+check_c_source_compiles("
+  #include <sys/random.h>
+  int main() {
+      unsigned int tmp;
+      getrandom(tmp, sizeof(tmp), GRND_NONBLOCK);
+      return 0;
+  }" CTR_HAVE_GETRANDOM)
+if(CTR_HAVE_GETRANDOM)
+  CTR_DEFINITION(CTR_HAVE_GETRANDOM)
+endif()
+
+
 # FIXME: MessagePack support
 check_c_source_compiles("
   #include \"../../../lib/msgpack-c/include/msgpack.h\"
