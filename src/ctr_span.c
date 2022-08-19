@@ -23,13 +23,6 @@
 #include <cfl/cfl_time.h>
 #include <cfl/cfl_kvlist.h>
 
-/* register a span to the ctrace context and sets the span id */
-static void span_register(struct ctrace *ctx, struct ctrace_span *span)
-{
-    ctx->last_span_id++;
-    span->id = ctx->last_span_id;
-}
-
 struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
                                     struct ctrace_span *parent)
 {
@@ -63,7 +56,7 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
     if (parent) {
         /* If a parent span was given, link to the 'childs' list */
         cfl_list_add(&span->_head, &parent->childs);
-        span->parent_span_id = parent->id;
+        ctr_id_set(&span->parent_span_id, &parent->id);
     }
     else {
         /* link directly to the ctrace context list of spans */
@@ -75,9 +68,21 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
 
     /* always start a span by default, the start can be overriden later if needed */
     ctr_span_start(ctx, span);
-
-    span_register(ctx, span);
     return span;
+}
+
+int ctr_span_set_id(struct ctrace_span *span, struct ctrace_id *cid)
+{
+    int ret = 0;
+
+    if (cid) {
+        ctr_id_set(&span->id, cid->buf);
+    }
+    else {
+        ret = ctr_id_init(&span->id);
+    }
+
+    return ret;
 }
 
 int ctr_span_kind_set(struct ctrace_span *span, int kind)
