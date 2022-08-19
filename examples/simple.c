@@ -18,7 +18,7 @@ int main()
      * it's not mandatory and you can pass a NULL instead on context creation.
      */
     ctr_opts_init(&opts);
-    ctr_opts_set(&opts, CTR_OPTS_TRACE_ID, "my-trace-id-123456");
+    ctr_opts_set(&opts, CTR_OPTS_TRACE_ID, "abd6253728372639");
 
     /* ctrace context */
     ctx = ctr_create(&opts);
@@ -34,6 +34,7 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+    ctr_span_set_id(span_root, NULL);
 
     /* add some attributes to the span */
     ctr_span_set_attribute_string(span_root, "agent", "Fluent Bit");
@@ -76,6 +77,7 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+    ctr_span_set_id(span_child, NULL);
 
     /* change span kind to client */
     ctr_span_kind_set(span_child, CTRACE_SPAN_CLIENT);
