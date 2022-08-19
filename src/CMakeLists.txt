@@ -2,6 +2,8 @@ set(src
   ctraces.c
   ctr_span.c
   ctr_log.c
+  ctr_id.c
+  ctr_random.c
   ctr_utils.c
   ctr_attributes.c
   # encoders
