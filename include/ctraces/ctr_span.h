@@ -66,8 +66,8 @@ struct ctrace_span_event {
 
 /* span context */
 struct ctrace_span {
-    uint64_t id;                      /* the unique span ID    */
-    uint64_t parent_span_id;          /* any parent ?, id=0 means a root span */
+    struct ctrace_id id;              /* the unique span ID    */
+    struct ctrace_id parent_span_id;  /* any parent ?, id=0 means a root span */
 
     int kind;                         /* span kind */
     uint64_t start_time;              /* start time */
@@ -99,6 +99,8 @@ void ctr_span_destroy(struct ctrace_span *span);
 
 int ctr_span_set_status(struct ctrace_span *span, int code, char *message);
 void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n);
+
+int ctr_span_set_id(struct ctrace_span *span, struct ctrace_id *cid);
 
 /* attributes */
 int ctr_span_set_attribute_string(struct ctrace_span *span, char *key, char *value);
