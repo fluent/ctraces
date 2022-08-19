@@ -181,6 +181,7 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     int min;
     int off = 1 + (level * 4);
     char tmp[1024];
+    cfl_sds_t id_hex;
     struct ctrace_span *s;
     struct ctrace_span_event *event;
     struct cfl_list *head;
@@ -189,6 +190,16 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
 
     snprintf(tmp, sizeof(tmp) - 1, "%*s[span '%s']\n", off, "", span->name);
     sds_cat_safe(buf, tmp);
+
+    id_hex = ctr_id_to_lower_base16(&span->id);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- id                      : %s\n", min, "", id_hex);
+    sds_cat_safe(buf, tmp);
+    cfl_sds_destroy(id_hex);
+
+    id_hex = ctr_id_to_lower_base16(&span->parent_span_id);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- parent_span_id          : %s\n", min, "", id_hex);
+    sds_cat_safe(buf, tmp);
+    cfl_sds_destroy(id_hex);
 
     snprintf(tmp, sizeof(tmp) - 1, "%*s- kind                    : %i (%s)\n", min, "", span->kind, ctr_span_kind_string(span));
     sds_cat_safe(buf, tmp);
@@ -250,6 +261,7 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
 
 cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
 {
+    cfl_sds_t id;
     cfl_sds_t buf;
     struct cfl_list *head;
     struct ctrace_span *span;
@@ -262,8 +274,10 @@ cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
     /* trace id */
     sds_cat_safe(&buf, "|--------- trace-id: ");
 
-    if (ctx->trace_id) {
-        sds_cat_safe(&buf, ctx->trace_id);
+    id = ctr_id_to_lower_base16(&ctx->trace_id);
+    if (id) {
+        sds_cat_safe(&buf, id);
+        cfl_sds_destroy(id);
     }
     else {
         sds_cat_safe(&buf, "--");

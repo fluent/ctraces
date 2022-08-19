@@ -28,6 +28,8 @@
 
 /* headers that are needed in general */
 #include <ctraces/ctr_info.h>
+#include <ctraces/ctr_id.h>
+#include <ctraces/ctr_random.h>
 #include <ctraces/ctr_version.h>
 #include <ctraces/ctr_span.h>
 #include <ctraces/ctr_attributes.h>
@@ -48,7 +50,7 @@ struct ctrace_opts {
 
 struct ctrace {
     /* trace context */
-    cfl_sds_t trace_id;
+    struct ctrace_id trace_id;
 
     /*
      * last_span_id represents the higher span id number assigned, every time
