@@ -8,28 +8,26 @@ This project is a core library for [Fluent Bit](https://fluentbit.io): agent and
 
 Clone the repository:
 
-```
+```shell
 git clone https://github.com/calyptia/ctraces
 ```
 
 Get into the project directory and retrieve submodules:
 
-```
+```shell
 cd ctraces
 git submodule update --remote
 ```
 
 Compile:
 
-```
+```shell
 cd build/
 cmake -DCTR_DEV=on ../
 make
 ```
 
 > CTR_DEV flag enables debugging mode, examples and the unit tests
-
-
 
 ## Usage
 

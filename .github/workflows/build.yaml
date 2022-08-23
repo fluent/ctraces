@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-            submodules: true
+          submodules: true
 
       - name: Build on ${{ matrix.os }} with vs-2019
         run: |
@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-            submodules: true
+          submodules: true
 
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         uses: uraimo/run-on-arch-action@v2.2.0
@@ -105,7 +105,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-            submodules: true
+          submodules: true
 
       - name: Build on ${{ matrix.os }} with ${{ matrix.compiler }}
         run: |
@@ -116,3 +116,30 @@ jobs:
         shell: bash
         env:
           CC: ${{ matrix.compiler }}
+
+  build-analysis-tests:
+    name: Build with various code analysis tools
+    strategy:
+      fail-fast: false
+      matrix:
+        preset:
+          - clang-sanitize-address
+          - clang-sanitize-memory
+          - clang-sanitize-undefined
+          - clang-sanitize-dataflow
+          - clang-sanitize-safe-stack
+          - valgrind
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: docker://lpenz/ghaction-cmake:0.19
+        with:
+          preset: ${{ matrix.preset }}
+          # dependencies_debian: ''
+          cmakeflags: '-DCTR_TESTS=On -DCMT_DEV=on .'
+          build_command: make all
