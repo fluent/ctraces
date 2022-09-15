@@ -10,6 +10,8 @@ int main()
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
     struct ctrace_span_event *event;
+    struct ctrace_resource *res;
+
     struct cfl_array *array;
     struct cfl_array *sub_array;
     struct cfl_kvlist *kv;
@@ -27,6 +29,8 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    res = ctr_resource_create_default(ctx);
+
     /* Create a root span */
     span_root = ctr_span_create(ctx, "main", NULL);
     if (!span_root) {
@@ -34,6 +38,7 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+    ctr_span_set_resource(span_root, res);
     ctr_span_set_id(span_root, NULL);
 
     /* add some attributes to the span */
@@ -77,6 +82,7 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+    ctr_span_set_resource(span_child, res);
     ctr_span_set_id(span_child, NULL);
 
     /* change span kind to client */
