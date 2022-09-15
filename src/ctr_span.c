@@ -49,19 +49,16 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
         return NULL;
     }
     cfl_list_init(&span->events);
-    cfl_list_init(&span->childs);
 
     span->dropped_attr_count = 0;
 
     if (parent) {
         /* If a parent span was given, link to the 'childs' list */
-        cfl_list_add(&span->_head, &parent->childs);
         ctr_id_set(&span->parent_span_id, &parent->id);
     }
-    else {
-        /* link directly to the ctrace context list of spans */
-        cfl_list_add(&span->_head, &ctx->spans);
-    }
+
+    /* link span to the context */
+    cfl_list_add(&span->_head, &ctx->spans);
 
     /* set default kind */
     ctr_span_kind_set(span, CTRACE_SPAN_INTERNAL);
@@ -83,6 +80,11 @@ int ctr_span_set_id(struct ctrace_span *span, struct ctrace_id *cid)
     }
 
     return ret;
+}
+
+void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res)
+{
+    span->resource = res;
 }
 
 int ctr_span_kind_set(struct ctrace_span *span, int kind)
@@ -210,7 +212,6 @@ void ctr_span_destroy(struct ctrace_span *span)
 {
     struct cfl_list *tmp;
     struct cfl_list *head;
-    struct ctrace_span *child;
     struct ctrace_span_event *event;
     struct ctrace_span_status *status;
 
@@ -227,12 +228,6 @@ void ctr_span_destroy(struct ctrace_span *span)
     cfl_list_foreach_safe(head, tmp, &span->events) {
         event = cfl_list_entry(head, struct ctrace_span_event, _head);
         ctr_span_event_delete(event);
-    }
-
-    /* childs */
-    cfl_list_foreach_safe(head, tmp, &span->childs) {
-        child = cfl_list_entry(head, struct ctrace_span, _head);
-        ctr_span_destroy(child);
     }
 
     /* status */
