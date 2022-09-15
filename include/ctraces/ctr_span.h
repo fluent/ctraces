@@ -77,10 +77,9 @@ struct ctrace_span {
 
     cfl_sds_t name;                   /* user-name assigned */
 
+    struct ctrace_resource *resource; /* resource   */
     struct ctrace_attributes *attr;   /* attributes */
-    struct cfl_list events;           /* events */
-    struct cfl_list childs;           /* list of child spans */
-
+    struct cfl_list events;           /* events     */
     struct ctrace_span_status status; /* status code */
 
     /*
@@ -101,6 +100,7 @@ int ctr_span_set_status(struct ctrace_span *span, int code, char *message);
 void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n);
 
 int ctr_span_set_id(struct ctrace_span *span, struct ctrace_id *cid);
+void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res);
 
 /* attributes */
 int ctr_span_set_attribute_string(struct ctrace_span *span, char *key, char *value);
