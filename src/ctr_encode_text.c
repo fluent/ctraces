@@ -138,7 +138,7 @@ static void format_attributes(cfl_sds_t *buf, struct cfl_kvlist *kv, int level)
             format_array(buf, v->data.as_array, off);
         }
         else if (v->type == CFL_VARIANT_KVLIST) {
-            format_attributes(buf, v->data.as_kv, off);
+            format_attributes(buf, v->data.as_kvlist, off);
         }
 
         sds_cat_safe(buf, "\n");
@@ -182,7 +182,6 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     int off = 1 + (level * 4);
     char tmp[1024];
     cfl_sds_t id_hex;
-    struct ctrace_span *s;
     struct ctrace_span_event *event;
     struct cfl_list *head;
 
@@ -251,11 +250,25 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
             format_event(buf, event, min);
         }
     }
+}
 
-    /* iterate child spans */
-    cfl_list_foreach(head, &span->childs) {
-        s = cfl_list_entry(head, struct ctrace_span, _head);
-        format_span(buf, ctx, s, ++level);
+static void format_resource(cfl_sds_t *buf, struct ctrace *ctx,struct ctrace_resource *res)
+{
+    struct cfl_list *head;
+    struct ctrace_span *span;
+
+    sds_cat_safe(buf, " [scope spans]\n");
+
+    /* look for spans that belongs to the given resource */
+    cfl_list_foreach(head, &ctx->spans){
+        span = cfl_list_entry(head, struct ctrace_span, _head);
+
+        /* skip resource if there is no match */
+        if (span->resource != res) {
+            continue;
+        }
+
+        format_span(buf, ctx, span, 1);
     }
 }
 
@@ -263,17 +276,32 @@ cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
 {
     cfl_sds_t id;
     cfl_sds_t buf;
+    char tmp[1024];
     struct cfl_list *head;
-    struct ctrace_span *span;
+    struct ctrace_resource *res;
 
     buf = cfl_sds_create_size(1024);
     if (!buf) {
         return NULL;
     }
 
-    /* trace id */
-    sds_cat_safe(&buf, "|--------- trace-id: ");
+    cfl_list_foreach(head, &ctx->resources) {
+        res = cfl_list_entry(head, struct ctrace_resource, _head);
 
+        sds_cat_safe(&buf, "|--------- RESOURCE SPANS---------|\n");
+        sds_cat_safe(&buf, " [resource scope]\n");
+        sds_cat_safe(&buf, "     - attributes:");
+        format_attributes(&buf, res->attr->kv, 8);
+
+        snprintf(tmp, sizeof(tmp) - 1, "     - dropped_attributes_count: %" PRIu32 "\n", res->dropped_attr_count);
+        sds_cat_safe(&buf, tmp);
+
+        format_resource(&buf, ctx, res);
+        sds_cat_safe(&buf, "\n");
+    }
+
+
+    /*
     id = ctr_id_to_lower_base16(&ctx->trace_id);
     if (id) {
         sds_cat_safe(&buf, id);
@@ -283,12 +311,7 @@ cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
         sds_cat_safe(&buf, "--");
     }
     sds_cat_safe(&buf, " ---------|\n");
-
-    /* iterate spans */
-    cfl_list_foreach(head, &ctx->spans) {
-        span = cfl_list_entry(head, struct ctrace_span, _head);
-        format_span(&buf, ctx, span, 0);
-    }
+    */
 
     return buf;
 }
