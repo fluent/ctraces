@@ -32,6 +32,7 @@
 #include <ctraces/ctr_random.h>
 #include <ctraces/ctr_version.h>
 #include <ctraces/ctr_span.h>
+#include <ctraces/ctr_resource.h>
 #include <ctraces/ctr_attributes.h>
 #include <ctraces/ctr_log.h>
 
@@ -49,15 +50,19 @@ struct ctrace_opts {
 };
 
 struct ctrace {
-    /* trace context */
-    struct ctrace_id trace_id;
-
     /*
      * last_span_id represents the higher span id number assigned, every time
      * a new span is created this value gets incremented.
      */
     uint64_t last_span_id;
     struct cfl_list spans;
+
+
+    /*
+     * When the user creates a new resource, we add it to a linked list so on
+     * every span we just keep a reference.
+     */
+    struct cfl_list resources;
 
     /* logging */
     int log_level;

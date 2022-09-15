@@ -53,16 +53,8 @@ struct ctrace *ctr_create(struct ctrace_opts *opts)
         ctr_errno();
         return NULL;
     }
+    cfl_list_init(&ctx->resources);
     cfl_list_init(&ctx->spans);
-
-    if (opts) {
-        if (opts->trace_id) {
-            ctr_id_set(&ctx->trace_id, opts->trace_id);
-        }
-        else {
-            ctr_id_init(&ctx->trace_id);
-        }
-    }
 
     return ctx;
 }
@@ -72,10 +64,18 @@ void ctr_destroy(struct ctrace *ctx)
     struct cfl_list *head;
     struct cfl_list *tmp;
     struct ctrace_span *span;
+    struct ctrace_resource *res;
 
+    /* delete spans */
     cfl_list_foreach_safe(head, tmp, &ctx->spans) {
         span = cfl_list_entry(head, struct ctrace_span, _head);
         ctr_span_destroy(span);
+    }
+
+    /* delete resouorces */
+    cfl_list_foreach_safe(head, tmp, &ctx->resources) {
+        res = cfl_list_entry(head, struct ctrace_resource, _head);
+        ctr_resource_destroy(res);
     }
 
     free(ctx);
