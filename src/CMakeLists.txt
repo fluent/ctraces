@@ -1,5 +1,6 @@
 set(src
   ctraces.c
+  ctr_resource.c
   ctr_span.c
   ctr_log.c
   ctr_id.c
