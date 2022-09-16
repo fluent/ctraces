@@ -21,14 +21,19 @@
 #define CTR_ID_H
 
 #define CTR_ID_BUFFER_SIZE    16
+#define CTR_ID_DEFAULT        "000000F1BI700000"
 
 struct ctrace_id {
-    uint8_t buf[CTR_ID_BUFFER_SIZE];
+    cfl_sds_t buf;
 };
 
-int ctr_id_init(struct ctrace_id *cid);
-void ctr_id_set(struct ctrace_id *cid, void *buf);
+struct ctrace_id *ctr_id_create_random();
+struct ctrace_id *ctr_id_create(void *buf, size_t len);
+void ctr_id_destroy(struct ctrace_id *cid);
+int ctr_id_set(struct ctrace_id *cid, void *buf, size_t len);
 int ctr_id_cmp(struct ctrace_id *cid1, struct ctrace_id *cid2);
+size_t ctr_id_get_len(struct ctrace_id *cid);
+void *ctr_id_get_buf(struct ctrace_id *cid);
 cfl_sds_t ctr_id_to_lower_base16(struct ctrace_id *cid);
 
 #endif
