@@ -32,6 +32,7 @@ void test_span()
     struct ctrace *ctx;
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
+    struct ctrace_id *id;
     struct cfl_array *array;
     struct cfl_kvlist *kvlist;
 
@@ -40,7 +41,12 @@ void test_span()
     /* create root span */
     span_root = ctr_span_create(ctx, "main", NULL);
     TEST_CHECK(span_root != NULL);
-    TEST_CHECK(span_root->kind == CTRACE_SPAN_INTERNAL  );
+    TEST_CHECK(span_root->kind == CTRACE_SPAN_INTERNAL);
+
+    /* set the span root a random id */
+    id = ctr_id_create_random();
+    TEST_CHECK(id != NULL);
+    ctr_span_set_id_with_cid(span_root, id);
 
     span_child = ctr_span_create(ctx, "do-work", span_root);
     TEST_CHECK(span_child != NULL);
