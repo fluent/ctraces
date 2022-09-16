@@ -51,7 +51,7 @@ void test_span()
     TEST_CHECK(span_child->kind == CTRACE_SPAN_CONSUMER);
 
     /* parent id check */
-    ret = ctr_id_cmp(&span_child->parent_span_id, &span_root->id);
+    ret = ctr_id_cmp(span_child->parent_span_id, span_root->id);
     TEST_CHECK(ret == 0);
 
     /* add attributes to span_child */
