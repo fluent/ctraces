@@ -11,10 +11,11 @@ int main()
     struct ctrace_span *span_child;
     struct ctrace_span_event *event;
     struct ctrace_resource *res;
-
+    struct ctrace_id *id;
     struct cfl_array *array;
     struct cfl_array *sub_array;
     struct cfl_kvlist *kv;
+
     /*
      * create an options context: this is used to initialize a CTrace context only,
      * it's not mandatory and you can pass a NULL instead on context creation.
@@ -29,8 +30,6 @@ int main()
         exit(EXIT_FAILURE);
     }
 
-    res = ctr_resource_create_default(ctx);
-
     /* Create a root span */
     span_root = ctr_span_create(ctx, "main", NULL);
     if (!span_root) {
@@ -38,8 +37,14 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+
+    /* Create some detault resource, populated already with some attributes */
+    res = ctr_resource_create_default(ctx);
     ctr_span_set_resource(span_root, res);
-    ctr_span_set_id(span_root, NULL);
+
+    /* Set a random ID to the span */
+    id = ctr_id_create_random();
+    ctr_span_set_id_with_cid(span_root, id);
 
     /* add some attributes to the span */
     ctr_span_set_attribute_string(span_root, "agent", "Fluent Bit");
@@ -82,8 +87,15 @@ int main()
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
+
+    /* use same resource information as the first span */
     ctr_span_set_resource(span_child, res);
-    ctr_span_set_id(span_child, NULL);
+
+    /* we will set the span ID as empty, but use the random ID generated as parent span id */
+    ctr_span_set_parent_id_with_cid(span_child, id);
+
+    /* destroy the id since is not longer needed */
+    ctr_id_destroy(id);
 
     /* change span kind to client */
     ctr_span_kind_set(span_child, CTRACE_SPAN_CLIENT);
