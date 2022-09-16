@@ -25,12 +25,14 @@
 struct ctrace_resource {
     uint32_t dropped_attr_count;      /* number of attributes that were discarded */
     struct ctrace_attributes *attr;   /* attributes */
+    cfl_sds_t schema_url;             /* schema_url */
     struct cfl_list _head;            /* link to struct ctrace->resources list */
 };
 
 struct ctrace_resource *ctr_resource_create(struct ctrace *ctx);
 struct ctrace_resource *ctr_resource_create_default(struct ctrace *ctx);
-int ctr_resources_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr);
+int ctr_resource_set_schema_url(struct ctrace_resource *res, char *url);
+int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr);
 void ctr_resource_set_dropped_attr_count(struct ctrace_resource *res, int count);
 void ctr_resource_destroy(struct ctrace_resource *res);
 

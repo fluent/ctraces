@@ -54,11 +54,25 @@ struct ctrace_resource *ctr_resource_create_default(struct ctrace *ctx)
     ctr_attributes_set_string(attr, "service.name", "Fluent Bit");
     ctr_attributes_set_int64(attr, "release_year", 2014);
 
-    ctr_resources_set_attributes(res, attr);
+    ctr_resource_set_attributes(res, attr);
     return res;
 }
 
-int ctr_resources_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr)
+int ctr_resource_set_schema_url(struct ctrace_resource *res, char *url)
+{
+    if (res->schema_url) {
+        cfl_sds_destroy(res->schema_url);
+    }
+
+    res->schema_url = cfl_sds_create(url);
+    if (!res->schema_url) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr)
 {
     if (!attr) {
         return -1;
@@ -79,6 +93,11 @@ void ctr_resource_destroy(struct ctrace_resource *res)
     if (res->attr) {
         ctr_attributes_destroy(res->attr);
     }
+
+    if (res->schema_url) {
+        cfl_sds_destroy(res->schema_url);
+    }
+
     cfl_list_del(&res->_head);
     free(res);
 }
