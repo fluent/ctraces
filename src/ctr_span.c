@@ -53,8 +53,8 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
     span->dropped_attr_count = 0;
 
     /* if a parent context was given, populate the span parent id */
-    if (parent && parent->id) {
-        ctr_span_set_parent_id_with_cid(span, parent->id);
+    if (parent && parent->span_id) {
+        ctr_span_set_parent_span_id_with_cid(span, parent->span_id);
     }
 
     /* link span to the context */
@@ -69,14 +69,14 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
 }
 
 /* Set the Span ID with a given buffer and length */
-int ctr_span_set_id(struct ctrace_span *span, void *buf, size_t len)
+int ctr_span_set_trace_id(struct ctrace_span *span, void *buf, size_t len)
 {
     if (!buf || len <= 0) {
         return -1;
     }
 
-    span->id = ctr_id_create(buf, len);
-    if (!span->id) {
+    span->trace_id = ctr_id_create(buf, len);
+    if (!span->trace_id) {
         return -1;
     }
 
@@ -84,15 +84,38 @@ int ctr_span_set_id(struct ctrace_span *span, void *buf, size_t len)
 }
 
 /* Set the Span ID by using a ctrace_id context */
-int ctr_span_set_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
+int ctr_span_set_trace_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
 {
-    return ctr_span_set_id(span,
-                           ctr_id_get_buf(cid),
-                           ctr_id_get_len(cid));
+    return ctr_span_set_trace_id(span,
+                                 ctr_id_get_buf(cid),
+                                 ctr_id_get_len(cid));
+}
+
+/* Set the Span ID with a given buffer and length */
+int ctr_span_set_span_id(struct ctrace_span *span, void *buf, size_t len)
+{
+    if (!buf || len <= 0) {
+        return -1;
+    }
+
+    span->span_id = ctr_id_create(buf, len);
+    if (!span->span_id) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/* Set the Span ID by using a ctrace_id context */
+int ctr_span_set_span_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
+{
+    return ctr_span_set_span_id(span,
+                                ctr_id_get_buf(cid),
+                                ctr_id_get_len(cid));
 }
 
 /* Set the Span Parent ID with a given buffer and length */
-int ctr_span_set_parent_id(struct ctrace_span *span, void *buf, size_t len)
+int ctr_span_set_parent_span_id(struct ctrace_span *span, void *buf, size_t len)
 {
     if (!buf || len <= 0) {
         return -1;
@@ -107,11 +130,11 @@ int ctr_span_set_parent_id(struct ctrace_span *span, void *buf, size_t len)
 }
 
 /* Set the Span ID by using a ctrace_id context */
-int ctr_span_set_parent_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
+int ctr_span_set_parent_span_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
 {
-    return ctr_span_set_parent_id(span,
-                                  ctr_id_get_buf(cid),
-                                  ctr_id_get_len(cid));
+    return ctr_span_set_parent_span_id(span,
+                                       ctr_id_get_buf(cid),
+                                       ctr_id_get_len(cid));
 }
 
 void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res)
@@ -251,8 +274,12 @@ void ctr_span_destroy(struct ctrace_span *span)
         cfl_sds_destroy(span->name);
     }
 
-    if (span->id) {
-        ctr_id_destroy(span->id);
+    if (span->trace_id) {
+        ctr_id_destroy(span->trace_id);
+    }
+
+    if (span->span_id) {
+        ctr_id_destroy(span->span_id);
     }
 
     if (span->parent_span_id) {
