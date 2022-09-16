@@ -64,9 +64,11 @@ struct ctrace_span_event {
     struct cfl_list _head;
 };
 
+/* Scope Spans */
 /* span context */
 struct ctrace_span {
-    struct ctrace_id *id;             /* the unique span ID    */
+    struct ctrace_id *trace_id;       /* the unique span ID    */
+    struct ctrace_id *span_id;        /* the unique span ID    */
     struct ctrace_id *parent_span_id; /* any parent ?, id=0 means a root span */
 
     int kind;                         /* span kind */
@@ -100,10 +102,12 @@ int ctr_span_set_status(struct ctrace_span *span, int code, char *message);
 void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n);
 
 /* span IDs */
-int ctr_span_set_id(struct ctrace_span *span, void *buf, size_t len);
-int ctr_span_set_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid);
-int ctr_span_set_parent_id(struct ctrace_span *span, void *buf, size_t len);
-int ctr_span_set_parent_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid);
+int ctr_span_set_trace_id(struct ctrace_span *span, void *buf, size_t len);
+int ctr_span_set_trace_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid);
+int ctr_span_set_span_id(struct ctrace_span *span, void *buf, size_t len);
+int ctr_span_set_span_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid);
+int ctr_span_set_parent_span_id(struct ctrace_span *span, void *buf, size_t len);
+int ctr_span_set_parent_span_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid);
 
 /* resource scope */
 void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res);
