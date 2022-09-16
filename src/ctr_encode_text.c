@@ -190,12 +190,22 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     snprintf(tmp, sizeof(tmp) - 1, "%*s[span '%s']\n", off, "", span->name);
     sds_cat_safe(buf, tmp);
 
-    id_hex = ctr_id_to_lower_base16(&span->id);
+    if (span->id) {
+        id_hex = ctr_id_to_lower_base16(span->id);
+    }
+    else {
+        id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+    }
     snprintf(tmp, sizeof(tmp) - 1, "%*s- id                      : %s\n", min, "", id_hex);
     sds_cat_safe(buf, tmp);
     cfl_sds_destroy(id_hex);
 
-    id_hex = ctr_id_to_lower_base16(&span->parent_span_id);
+    if (span->parent_span_id) {
+        id_hex = ctr_id_to_lower_base16(span->parent_span_id);
+    }
+    else {
+        id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+    }
     snprintf(tmp, sizeof(tmp) - 1, "%*s- parent_span_id          : %s\n", min, "", id_hex);
     sds_cat_safe(buf, tmp);
     cfl_sds_destroy(id_hex);
