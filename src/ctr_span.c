@@ -251,6 +251,14 @@ void ctr_span_destroy(struct ctrace_span *span)
         cfl_sds_destroy(span->name);
     }
 
+    if (span->id) {
+        ctr_id_destroy(span->id);
+    }
+
+    if (span->parent_span_id) {
+        ctr_id_destroy(span->parent_span_id);
+    }
+
     /* attributes */
     if (span->attr) {
         ctr_attributes_destroy(span->attr);
