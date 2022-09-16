@@ -52,9 +52,9 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
 
     span->dropped_attr_count = 0;
 
-    if (parent) {
-        /* If a parent span was given, link to the 'childs' list */
-        ctr_id_set(&span->parent_span_id, &parent->id);
+    /* if a parent context was given, populate the span parent id */
+    if (parent && parent->id) {
+        ctr_span_set_parent_id_with_cid(span, parent->id);
     }
 
     /* link span to the context */
@@ -68,18 +68,50 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
     return span;
 }
 
-int ctr_span_set_id(struct ctrace_span *span, struct ctrace_id *cid)
+/* Set the Span ID with a given buffer and length */
+int ctr_span_set_id(struct ctrace_span *span, void *buf, size_t len)
 {
-    int ret = 0;
-
-    if (cid) {
-        ctr_id_set(&span->id, cid->buf);
-    }
-    else {
-        ret = ctr_id_init(&span->id);
+    if (!buf || len <= 0) {
+        return -1;
     }
 
-    return ret;
+    span->id = ctr_id_create(buf, len);
+    if (!span->id) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/* Set the Span ID by using a ctrace_id context */
+int ctr_span_set_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
+{
+    return ctr_span_set_id(span,
+                           ctr_id_get_buf(cid),
+                           ctr_id_get_len(cid));
+}
+
+/* Set the Span Parent ID with a given buffer and length */
+int ctr_span_set_parent_id(struct ctrace_span *span, void *buf, size_t len)
+{
+    if (!buf || len <= 0) {
+        return -1;
+    }
+
+    span->parent_span_id = ctr_id_create(buf, len);
+    if (!span->parent_span_id) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/* Set the Span ID by using a ctrace_id context */
+int ctr_span_set_parent_id_with_cid(struct ctrace_span *span, struct ctrace_id *cid)
+{
+    return ctr_span_set_parent_id(span,
+                                  ctr_id_get_buf(cid),
+                                  ctr_id_get_len(cid));
 }
 
 void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res)
