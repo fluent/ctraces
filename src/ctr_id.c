@@ -90,7 +90,21 @@ int ctr_id_set(struct ctrace_id *cid, void *buf, size_t len)
 
 int ctr_id_cmp(struct ctrace_id *cid1, struct ctrace_id *cid2)
 {
-    if (memcmp(&cid1->buf, &cid2->buf, CTR_ID_BUFFER_SIZE) == 0) {
+    int len1;
+    int len2;
+
+    if (!cid1 || !cid2) {
+        return -1;
+    }
+
+    len1 = cfl_sds_len(cid1->buf);
+    len2 = cfl_sds_len(cid2->buf);
+
+    if (len1 != len2) {
+        return -1;
+    }
+
+    if (memcmp(cid1->buf, cid2->buf, len1) == 0) {
         return 0;
     }
 
