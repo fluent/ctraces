@@ -48,6 +48,9 @@ void test_span()
     TEST_CHECK(id != NULL);
     ctr_span_set_id_with_cid(span_root, id);
 
+    /* id is not longer needed */
+    ctr_id_destroy(id);
+
     span_child = ctr_span_create(ctx, "do-work", span_root);
     TEST_CHECK(span_child != NULL);
 
