@@ -11,6 +11,12 @@ set(src
   ctr_attributes.c
   # encoders
   ctr_encode_text.c
+  # opentelemetry
+  external/opentelemetry_common.pb-c.c
+  external/opentelemetry_resource.pb-c.c
+  external/opentelemetry_trace.pb-c.c
+  external/opentelemetry_trace_service.pb-c.c
+  external/protobuf-c.c
   )
 
 # Static Library
