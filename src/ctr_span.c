@@ -275,9 +275,9 @@ void ctr_span_set_dropped_events_count(struct ctrace_span *span, uint32_t count)
     span->dropped_events_count = count;
 }
 
-void ctr_span_set_dropped_attributes_count(struct ctrace_span *span, int n)
+void ctr_span_set_dropped_attributes_count(struct ctrace_span *span, uint32_t count)
 {
-    span->dropped_attr_count = n;
+    span->dropped_attr_count = count;
 }
 
 void ctr_span_destroy(struct ctrace_span *span)
