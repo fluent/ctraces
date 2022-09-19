@@ -20,7 +20,7 @@
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_resource.h>
 
-struct ctrace_resource *ctr_resource_create(struct ctrace *ctx)
+struct ctrace_resource *ctr_resource_create()
 {
     struct ctrace_resource *res;
 
@@ -29,17 +29,16 @@ struct ctrace_resource *ctr_resource_create(struct ctrace *ctx)
         ctr_errno();
         return NULL;
     }
-    cfl_list_add(&res->_head, &ctx->resources);
 
     return res;
 }
 
-struct ctrace_resource *ctr_resource_create_default(struct ctrace *ctx)
+struct ctrace_resource *ctr_resource_create_default()
 {
     struct ctrace_resource *res;
     struct ctrace_attributes *attr;
 
-    res = ctr_resource_create(ctx);
+    res = ctr_resource_create();
     if (!res) {
         return NULL;
     }
@@ -58,20 +57,6 @@ struct ctrace_resource *ctr_resource_create_default(struct ctrace *ctx)
     return res;
 }
 
-int ctr_resource_set_schema_url(struct ctrace_resource *res, char *url)
-{
-    if (res->schema_url) {
-        cfl_sds_destroy(res->schema_url);
-    }
-
-    res->schema_url = cfl_sds_create(url);
-    if (!res->schema_url) {
-        return -1;
-    }
-
-    return 0;
-}
-
 int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr)
 {
     if (!attr) {
@@ -79,11 +64,10 @@ int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attri
     }
 
     res->attr = attr;
-
     return 0;
 }
 
-void ctr_resource_set_dropped_attr_count(struct ctrace_resource *res, int count)
+void ctr_resource_set_dropped_attr_count(struct ctrace_resource *res, uint32_t count)
 {
     res->dropped_attr_count = count;
 }
@@ -93,11 +77,73 @@ void ctr_resource_destroy(struct ctrace_resource *res)
     if (res->attr) {
         ctr_attributes_destroy(res->attr);
     }
+    free(res);
+}
 
-    if (res->schema_url) {
-        cfl_sds_destroy(res->schema_url);
+/*
+ * resource_span API
+ * -----------------
+ */
+
+/* creates a resource_span context */
+struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx)
+{
+    struct ctrace_resource_span *resource_span;
+
+    resource_span = calloc(1, sizeof(struct ctrace_resource_span));
+    if (!resource_span) {
+        ctr_errno();
+        return NULL;
+    }
+    cfl_list_init(&resource_span->scope_spans);
+
+    /* link to ctraces context */
+    cfl_list_add(&resource_span->_head, &ctx->resource_spans);
+
+    return resource_span;
+}
+
+/* Set the schema_url for a resource_span */
+int ctr_resource_span_set_schema_url(struct ctrace_resource_span *resource_span, char *url)
+{
+    if (resource_span->schema_url) {
+        cfl_sds_destroy(resource_span->schema_url);
     }
 
-    cfl_list_del(&res->_head);
-    free(res);
+    resource_span->schema_url = cfl_sds_create(url);
+    if (!resource_span->schema_url) {
+        return -1;
+    }
+
+    return 0;
+}
+
+void ctr_resource_span_set_resource(struct ctrace_resource_span *resource_span,
+                                    struct ctrace_resource *resource)
+{
+    resource_span->resource = resource;
+}
+
+void ctr_resource_span_destroy(struct ctrace_resource_span *resource_span)
+{
+    struct cfl_list *tmp;
+    struct cfl_list *head;
+    struct ctrace_scope_span *scope_span;
+
+    /* release resource if set */
+    if (resource_span->resource) {
+        ctr_resource_destroy(resource_span->resource);
+    }
+
+    if (resource_span->schema_url) {
+        cfl_sds_destroy(resource_span->schema_url);
+    }
+
+    /* remove scope spans */
+    cfl_list_foreach_safe(head, tmp, &resource_span->scope_spans) {
+        scope_span = cfl_list_entry(head, struct ctrace_scope_span, _head);
+        ctr_scope_span_destroy(scope_span);
+    }
+
+    free(resource_span);
 }

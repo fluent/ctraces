@@ -10,8 +10,13 @@ int main()
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
     struct ctrace_span_event *event;
-    struct ctrace_resource *res;
-    struct ctrace_id *id;
+    struct ctrace_resource_span *resource_span;
+    struct ctrace_resource *resource;
+    struct ctrace_scope_span *scope_span;
+    struct ctrace_instrumentation_scope *instrumentation_scope;
+    struct ctrace_link *link;
+    struct ctrace_id *span_id;
+    struct ctrace_id *trace_id;
     struct cfl_array *array;
     struct cfl_array *sub_array;
     struct cfl_kvlist *kv;
@@ -19,9 +24,10 @@ int main()
     /*
      * create an options context: this is used to initialize a CTrace context only,
      * it's not mandatory and you can pass a NULL instead on context creation.
+     *
+     * note: not used.
      */
     ctr_opts_init(&opts);
-    ctr_opts_set(&opts, CTR_OPTS_TRACE_ID, "abd6253728372639");
 
     /* ctrace context */
     ctx = ctr_create(&opts);
@@ -30,21 +36,41 @@ int main()
         exit(EXIT_FAILURE);
     }
 
+    /* resource span */
+    resource_span = ctr_resource_span_create(ctx);
+    ctr_resource_span_set_schema_url(resource_span, "https://ctraces/resource_span_schema_url");
+
+    /* create a 'resource' for the 'resource span' in question */
+    resource = ctr_resource_create_default();
+    ctr_resource_span_set_resource(resource_span, resource);
+
+    /* scope span */
+    scope_span = ctr_scope_span_create(resource_span);
+    ctr_scope_span_set_schema_url(scope_span, "https://ctraces/scope_span_schema_url");
+
+    /* create an optional instrumentation scope */
+    instrumentation_scope = ctr_instrumentation_scope_create("ctrace", "a.b.c", 3, NULL);
+    ctr_scope_span_set_instrumentation_scope(scope_span, instrumentation_scope);
+
+    /* generate a random trace_id */
+    trace_id = ctr_id_create_random();
+
+    /* generate a random ID for the new span */
+    span_id = ctr_id_create_random();
+
     /* Create a root span */
-    span_root = ctr_span_create(ctx, "main", NULL);
+    span_root = ctr_span_create(ctx, scope_span, "main", NULL);
     if (!span_root) {
         ctr_destroy(ctx);
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
 
-    /* Create some detault resource, populated already with some attributes */
-    res = ctr_resource_create_default(ctx);
-    ctr_span_set_resource(span_root, res);
+    /* assign the random ID */
+    ctr_span_set_span_id_with_cid(span_root, span_id);
 
-    /* Set a random ID to the span */
-    id = ctr_id_create_random();
-    ctr_span_set_id_with_cid(span_root, id);
+    /* set random trace_id */
+    ctr_span_set_trace_id_with_cid(span_root, trace_id);
 
     /* add some attributes to the span */
     ctr_span_set_attribute_string(span_root, "agent", "Fluent Bit");
@@ -81,24 +107,42 @@ int main()
     ctr_span_set_attribute_kvlist(span_root, "my-list", kv);
 
     /* create a child span */
-    span_child = ctr_span_create(ctx, "do-work", span_root);
+    span_child = ctr_span_create(ctx, scope_span, "do-work", span_root);
     if (!span_child) {
         ctr_destroy(ctx);
         ctr_opts_exit(&opts);
         exit(EXIT_FAILURE);
     }
 
-    /* use same resource information as the first span */
-    ctr_span_set_resource(span_child, res);
+    /* set trace_id */
+    ctr_span_set_trace_id_with_cid(span_child, trace_id);
 
-    /* we will set the span ID as empty, but use the random ID generated as parent span id */
-    ctr_span_set_parent_id_with_cid(span_child, id);
+    /* use span_root ID as parent_span_id */
+    ctr_span_set_parent_span_id_with_cid(span_child, span_id);
 
-    /* destroy the id since is not longer needed */
-    ctr_id_destroy(id);
+    /* delete old span id and generate a new one */
+    ctr_id_destroy(span_id);
+    span_id = ctr_id_create_random();
+    ctr_span_set_span_id_with_cid(span_child, span_id);
+
+    /* destroy the IDs since is not longer needed */
+    ctr_id_destroy(span_id);
+    ctr_id_destroy(trace_id);
 
     /* change span kind to client */
     ctr_span_kind_set(span_child, CTRACE_SPAN_CLIENT);
+
+    /* create a Link (no valid IDs of course) */
+    trace_id = ctr_id_create_random();
+    span_id = ctr_id_create_random();
+
+    link = ctr_link_create_with_cid(span_child, trace_id, span_id);
+    ctr_link_set_trace_state(link, "aaabbbccc");
+    ctr_link_set_dropped_attr_count(link, 2);
+
+    /* delete IDs */
+    ctr_id_destroy(span_id);
+    ctr_id_destroy(trace_id);
 
     /* Encode Trace as a readable text */
     text = ctr_encode_text_create(ctx);

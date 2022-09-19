@@ -183,6 +183,7 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     char tmp[1024];
     cfl_sds_t id_hex;
     struct ctrace_span_event *event;
+    struct ctrace_link *link;
     struct cfl_list *head;
 
     min = off + 4;
@@ -190,21 +191,34 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     snprintf(tmp, sizeof(tmp) - 1, "%*s[span '%s']\n", off, "", span->name);
     sds_cat_safe(buf, tmp);
 
-    if (span->id) {
-        id_hex = ctr_id_to_lower_base16(span->id);
+    /* trace_id */
+    if (span->trace_id) {
+        id_hex = ctr_id_to_lower_base16(span->trace_id);
     }
     else {
         id_hex = cfl_sds_create(CTR_ID_DEFAULT);
     }
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- id                      : %s\n", min, "", id_hex);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- trace_id                : %s\n", min, "", id_hex);
     sds_cat_safe(buf, tmp);
     cfl_sds_destroy(id_hex);
 
+    /* span_id */
+    if (span->span_id) {
+        id_hex = ctr_id_to_lower_base16(span->span_id);
+    }
+    else {
+        id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+    }
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- span_id                 : %s\n", min, "", id_hex);
+    sds_cat_safe(buf, tmp);
+    cfl_sds_destroy(id_hex);
+
+    /* parent_span_id */
     if (span->parent_span_id) {
         id_hex = ctr_id_to_lower_base16(span->parent_span_id);
     }
     else {
-        id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+        id_hex = cfl_sds_create("undefined");
     }
     snprintf(tmp, sizeof(tmp) - 1, "%*s- parent_span_id          : %s\n", min, "", id_hex);
     sds_cat_safe(buf, tmp);
@@ -260,68 +274,166 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
             format_event(buf, event, min);
         }
     }
+
+    /* links */
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- [links]\n", min, "");
+    sds_cat_safe(buf, tmp);
+
+    cfl_list_foreach(head, &span->links) {
+        link = cfl_list_entry(head, struct ctrace_link, _head);
+
+        off = min + 4;
+
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- link:\n", off, "");
+        sds_cat_safe(buf, tmp);
+
+        off += 4;
+
+        /* trace_id */
+        if (link->trace_id) {
+            id_hex = ctr_id_to_lower_base16(link->trace_id);
+        }
+        else {
+            id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+        }
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- trace_id             : %s\n", off, "", id_hex);
+        sds_cat_safe(buf, tmp);
+        cfl_sds_destroy(id_hex);
+
+        /* span_id */
+        if (link->span_id) {
+            id_hex = ctr_id_to_lower_base16(link->span_id);
+        }
+        else {
+            id_hex = cfl_sds_create(CTR_ID_DEFAULT);
+        }
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- span_id              : %s\n", off, "", id_hex);
+        sds_cat_safe(buf, tmp);
+        cfl_sds_destroy(id_hex);
+
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- trace_state          : %s\n", off, "", link->trace_state);
+        sds_cat_safe(buf, tmp);
+
+        snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_events_count : %" PRIu32 "\n", off, "", link->dropped_attr_count);
+        sds_cat_safe(buf, tmp);
+
+        /* link attributes */
+        if (!link->attr) {
+            snprintf(tmp, sizeof(tmp) - 1, "%*s- attributes           : none\n", off, "");
+            sds_cat_safe(buf, tmp);
+        }
+        else {
+            snprintf(tmp, sizeof(tmp) - 1, "%*s- attributes           : ", off, "");
+            sds_cat_safe(buf, tmp);
+            format_attributes(buf, span->attr->kv, off);
+        }
+    }
 }
 
-static void format_resource(cfl_sds_t *buf, struct ctrace *ctx,struct ctrace_resource *res)
+static void format_spans(cfl_sds_t *buf, struct ctrace *ctx, struct cfl_list *spans)
 {
     struct cfl_list *head;
     struct ctrace_span *span;
 
-    sds_cat_safe(buf, " [scope spans]\n");
+    cfl_sds_printf(buf, "    [spans]\n");
 
     /* look for spans that belongs to the given resource */
-    cfl_list_foreach(head, &ctx->spans){
+    cfl_list_foreach(head, spans){
         span = cfl_list_entry(head, struct ctrace_span, _head);
 
         /* skip resource if there is no match */
-        if (span->resource != res) {
-            continue;
+        format_span(buf, ctx, span, 2);
+    }
+}
+
+static void format_instrumentation_scope(cfl_sds_t *buf,
+                                         struct ctrace_instrumentation_scope *scope)
+{
+    cfl_sds_printf(buf, "    instrumentation scope:\n");
+    cfl_sds_printf(buf, "        - name                    : %s\n", scope->name);
+    cfl_sds_printf(buf, "        - version                 : %s\n", scope->version);
+    cfl_sds_printf(buf, "        - dropped_attributes_count: %i\n", scope->dropped_attr_count);
+
+    if (scope->attr) {
+        cfl_sds_printf(buf, "        - attributes:\n");
+        format_attributes(buf, scope->attr->kv, 8);
+    }
+    else {
+        cfl_sds_printf(buf, "        - attributes: undefined\n");
+    }
+}
+
+static void format_resource(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_resource *resource)
+{
+    cfl_sds_printf(buf, "  resource:\n");
+    cfl_sds_printf(buf, "     - attributes:");
+    format_attributes(buf, resource->attr->kv, 8);
+    cfl_sds_printf(buf, "     - dropped_attributes_count: %" PRIu32 "\n", resource->dropped_attr_count);
+}
+
+static void format_scope_spans(cfl_sds_t *buf, struct ctrace *ctx, struct cfl_list *scope_spans)
+{
+    struct cfl_list *head;
+    struct ctrace_scope_span *scope_span;
+
+    cfl_list_foreach(head, scope_spans) {
+        scope_span = cfl_list_entry(head, struct ctrace_scope_span, _head);
+
+        cfl_sds_printf(buf, "  [scope_span]\n");
+
+        /* format 'instrumentation_scope' if set */
+        if (scope_span->instrumentation_scope) {
+            format_instrumentation_scope(buf, scope_span->instrumentation_scope);
         }
 
-        format_span(buf, ctx, span, 1);
+        /* schema_url */
+        if (scope_span->schema_url) {
+            cfl_sds_printf(buf, "    schema_url: %s\n", scope_span->schema_url);
+        }
+        else {
+            cfl_sds_printf(buf, "    schema_url: \"\"\n");
+        }
+
+        /* spans */
+        format_spans(buf, ctx, &scope_span->spans);
     }
 }
 
 cfl_sds_t ctr_encode_text_create(struct ctrace *ctx)
 {
-    cfl_sds_t id;
     cfl_sds_t buf;
-    char tmp[1024];
     struct cfl_list *head;
-    struct ctrace_resource *res;
+    struct ctrace_resource_span *resource_span;
 
     buf = cfl_sds_create_size(1024);
     if (!buf) {
         return NULL;
     }
 
-    cfl_list_foreach(head, &ctx->resources) {
-        res = cfl_list_entry(head, struct ctrace_resource, _head);
+    /* iterate resource_spans */
+    cfl_list_foreach(head, &ctx->resource_spans) {
+        resource_span = cfl_list_entry(head, struct ctrace_resource_span, _head);
 
-        sds_cat_safe(&buf, "|--------- RESOURCE SPANS---------|\n");
-        sds_cat_safe(&buf, " [resource scope]\n");
-        sds_cat_safe(&buf, "     - attributes:");
-        format_attributes(&buf, res->attr->kv, 8);
+        sds_cat_safe(&buf, "|-------------------- RESOURCE SPAN --------------------|\n");
 
-        snprintf(tmp, sizeof(tmp) - 1, "     - dropped_attributes_count: %" PRIu32 "\n", res->dropped_attr_count);
-        sds_cat_safe(&buf, tmp);
+        if (resource_span->resource) {
+            format_resource(&buf, ctx, resource_span->resource);
+        }
+        else {
+            cfl_sds_printf(&buf, "  resource: {}\n");
+        }
 
-        format_resource(&buf, ctx, res);
-        sds_cat_safe(&buf, "\n");
+        /* schema_url */
+        if (resource_span->schema_url) {
+            cfl_sds_printf(&buf, "  schema_url: %s\n", resource_span->schema_url);
+        }
+        else {
+            cfl_sds_printf(&buf, "  schema_url: \"\"\n");
+        }
+
+        /* scope spans */
+        format_scope_spans(&buf, ctx, &resource_span->scope_spans);
     }
-
-
-    /*
-    id = ctr_id_to_lower_base16(&ctx->trace_id);
-    if (id) {
-        sds_cat_safe(&buf, id);
-        cfl_sds_destroy(id);
-    }
-    else {
-        sds_cat_safe(&buf, "--");
-    }
-    sds_cat_safe(&buf, " ---------|\n");
-    */
 
     return buf;
 }

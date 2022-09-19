@@ -23,33 +23,43 @@
 #include <cfl/cfl_time.h>
 #include <cfl/cfl_kvlist.h>
 
-struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
+struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_scope_span *scope_span, cfl_sds_t name,
                                     struct ctrace_span *parent)
 {
     struct ctrace_span *span;
 
-    if (!name) {
+    if (!ctx || !scope_span || !name) {
         return NULL;
     }
 
+    /* allocate a spanc context */
     span = calloc(1, sizeof(struct ctrace_span));
     if (!span) {
         ctr_errno();
         return NULL;
     }
+
+    /* references */
+    span->scope_span = scope_span;
+    span->ctx = ctx;
+
+    /* name */
     span->name = cfl_sds_create(name);
     if (!span->name) {
         free(span);
         return NULL;
     }
 
+    /* attributes */
     span->attr = ctr_attributes_create();
     if (!span->attr) {
         free(span);
         return NULL;
     }
     cfl_list_init(&span->events);
+    cfl_list_init(&span->links);
 
+    /* dropped attributes count */
     span->dropped_attr_count = 0;
 
     /* if a parent context was given, populate the span parent id */
@@ -57,8 +67,11 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, cfl_sds_t name,
         ctr_span_set_parent_span_id_with_cid(span, parent->span_id);
     }
 
-    /* link span to the context */
-    cfl_list_add(&span->_head, &ctx->spans);
+    /* link span to struct scope_span->spans */
+    cfl_list_add(&span->_head, &scope_span->spans);
+
+    /* link span to the struct ctrace->span_list */
+    cfl_list_add(&span->_head_global, &ctx->span_list);
 
     /* set default kind */
     ctr_span_kind_set(span, CTRACE_SPAN_INTERNAL);
@@ -121,6 +134,10 @@ int ctr_span_set_parent_span_id(struct ctrace_span *span, void *buf, size_t len)
         return -1;
     }
 
+    if (span->parent_span_id) {
+        ctr_id_destroy(span->parent_span_id);
+    }
+
     span->parent_span_id = ctr_id_create(buf, len);
     if (!span->parent_span_id) {
         return -1;
@@ -135,11 +152,6 @@ int ctr_span_set_parent_span_id_with_cid(struct ctrace_span *span, struct ctrace
     return ctr_span_set_parent_span_id(span,
                                        ctr_id_get_buf(cid),
                                        ctr_id_get_len(cid));
-}
-
-void ctr_span_set_resource(struct ctrace_span *span, struct ctrace_resource *res)
-{
-    span->resource = res;
 }
 
 int ctr_span_kind_set(struct ctrace_span *span, int kind)
@@ -258,9 +270,9 @@ int ctr_span_set_status(struct ctrace_span *span, int code, char *message)
     return 0;
 }
 
-void ctr_span_set_dropped_events_count(struct ctrace_span *span, int n)
+void ctr_span_set_dropped_events_count(struct ctrace_span *span, uint32_t count)
 {
-    span->dropped_events_count = n;
+    span->dropped_events_count = count;
 }
 
 void ctr_span_destroy(struct ctrace_span *span)
@@ -269,6 +281,7 @@ void ctr_span_destroy(struct ctrace_span *span)
     struct cfl_list *head;
     struct ctrace_span_event *event;
     struct ctrace_span_status *status;
+    struct ctrace_link *link;
 
     if (span->name) {
         cfl_sds_destroy(span->name);
@@ -297,6 +310,12 @@ void ctr_span_destroy(struct ctrace_span *span)
         ctr_span_event_delete(event);
     }
 
+    /* links */
+    cfl_list_foreach_safe(head, tmp, &span->links) {
+        link = cfl_list_entry(head, struct ctrace_link, _head);
+        ctr_link_destroy(link);
+    }
+
     /* status */
     status = &span->status;
     if (status->message) {
@@ -304,6 +323,7 @@ void ctr_span_destroy(struct ctrace_span *span)
     }
 
     cfl_list_del(&span->_head);
+    cfl_list_del(&span->_head_global);
     free(span);
 }
 
@@ -382,9 +402,9 @@ int ctr_span_event_set_attribute_kvlist(struct ctrace_span_event *event, char *k
     return ctr_attributes_set_kvlist(event->attr, key, value);
 }
 
-void ctr_span_event_set_dropped_attributes_count(struct ctrace_span_event *event, int n)
+void ctr_span_event_set_dropped_attributes_count(struct ctrace_span_event *event, uint32_t count)
 {
-    event->dropped_attr_count = n;
+    event->dropped_attr_count = count;
 }
 
 void ctr_span_event_delete(struct ctrace_span_event *event)
