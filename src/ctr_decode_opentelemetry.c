@@ -488,9 +488,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     size_t resource_span_index;
     size_t scope_span_index;
     size_t span_index;
-
     struct ctrace *ctr;
-    struct ctrace_opts *opts;
     struct ctrace_span *ctr_span;
     struct ctrace_resource *ctr_resource;
     struct ctrace_resource_span *ctr_resource_span;
@@ -507,11 +505,9 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
         return -1;
     }
 
-    opts = calloc(1, sizeof(struct ctrace_opts));
-    ctr_opts_init(opts);
-    ctr = ctr_create(opts);
+    ctr = ctr_create(NULL);
 
-    for(resource_span_index = 0; resource_span_index < service_request->n_resource_spans; resource_span_index++) {
+    for (resource_span_index = 0; resource_span_index < service_request->n_resource_spans; resource_span_index++) {
         otel_resource_span = service_request->resource_spans[resource_span_index];
         if (otel_resource_span == NULL) {
             return -1;
