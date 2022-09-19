@@ -21,13 +21,13 @@
 #include <ctraces/ctraces.h>
 #include <cfl/cfl_array.h>
 
-static int ctr_convert_any_value(struct opentelemetry_decode_value *ctr_val,
-           opentelemetry_decode_value_type value_type, char *key,
-           Opentelemetry__Proto__Common__V1__AnyValue *val);
+static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
+                             opentelemetry_decode_value_type value_type, char *key,
+                             Opentelemetry__Proto__Common__V1__AnyValue *val);
 
-static int ctr_convert_string_value(struct opentelemetry_decode_value *ctr_val,
-                                    opentelemetry_decode_value_type value_type,
-                                    char *key, char *val)
+static int convert_string_value(struct opentelemetry_decode_value *ctr_val,
+                                opentelemetry_decode_value_type value_type,
+                                char *key, char *val)
 {
     int result;
 
@@ -50,15 +50,15 @@ static int ctr_convert_string_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result == -2) {
-        printf("ctr_convert_string_value: unknown value type");
+        printf("convert_string_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_bool_value(struct opentelemetry_decode_value *ctr_val,
-                                            opentelemetry_decode_value_type value_type,
-                                            char *key, protobuf_c_boolean val)
+static int convert_bool_value(struct opentelemetry_decode_value *ctr_val,
+                              opentelemetry_decode_value_type value_type,
+                              char *key, protobuf_c_boolean val)
 {
     int result;
 
@@ -81,15 +81,15 @@ static int ctr_convert_bool_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result == -2) {
-        printf("ctr_convert_bool_value: unknown value type");
+        printf("convert_bool_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_int_value(struct opentelemetry_decode_value *ctr_val,
-                                           opentelemetry_decode_value_type value_type,
-                                           char *key, int64_t val)
+static int convert_int_value(struct opentelemetry_decode_value *ctr_val,
+                             opentelemetry_decode_value_type value_type,
+                             char *key, int64_t val)
 {
     int result;
 
@@ -112,15 +112,15 @@ static int ctr_convert_int_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result == -2) {
-        printf("ctr_convert_int_value: unknown value type");
+        printf("convert_int_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_double_value(struct opentelemetry_decode_value *ctr_val,
-                                    opentelemetry_decode_value_type value_type,
-                                    char *key, double val)
+static int convert_double_value(struct opentelemetry_decode_value *ctr_val,
+                                opentelemetry_decode_value_type value_type,
+                                char *key, double val)
 {
     int result;
 
@@ -143,15 +143,15 @@ static int ctr_convert_double_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result == -2) {
-        printf("ctr_convert_double_value: unknown value type");
+        printf("convert_double_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
-                                   opentelemetry_decode_value_type value_type,
-                                   char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr)
+static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
+                               opentelemetry_decode_value_type value_type,
+                               char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr)
 {
     int array_index;
     int result;
@@ -171,7 +171,7 @@ static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
          array_index < otel_arr->n_values && result == 0;
          array_index++) {
         val = otel_arr->values[array_index];
-        result = ctr_convert_any_value(ctr_arr_val, CTR_OPENTELEMETRY_TYPE_ARRAY, NULL, val);
+        result = convert_any_value(ctr_arr_val, CTR_OPENTELEMETRY_TYPE_ARRAY, NULL, val);
     }
 
     if (result < 0) {
@@ -200,15 +200,15 @@ static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
 
     free(ctr_arr_val);
     if (result == -2) {
-        fprintf(stderr, "ctr_convert_array_value: unknown value type\n");
+        fprintf(stderr, "convert_array_value: unknown value type\n");
     }
 
     return result;
 }
 
-static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
-           opentelemetry_decode_value_type value_type,
-           char *key, Opentelemetry__Proto__Common__V1__KeyValueList *otel_kvlist)
+static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
+                                opentelemetry_decode_value_type value_type,
+                                char *key, Opentelemetry__Proto__Common__V1__KeyValueList *otel_kvlist)
 {
     int kvlist_index;
     int result;
@@ -228,7 +228,7 @@ static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
          kvlist_index++) {
 
         kv = otel_kvlist->values[kvlist_index];
-        result = ctr_convert_any_value(ctr_kvlist_val, CTR_OPENTELEMETRY_TYPE_KVLIST, kv->key, kv->value);
+        result = convert_any_value(ctr_kvlist_val, CTR_OPENTELEMETRY_TYPE_KVLIST, kv->key, kv->value);
     }
 
     if (result < 0){
@@ -258,22 +258,21 @@ static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
     free(ctr_kvlist_val);
 
     if (result == -2) {
-        printf("ctr_convert_kvlist_value: unknown value type");
+        printf("convert_kvlist_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
-                                    opentelemetry_decode_value_type value_type,
-                                    char *key, void *buf, size_t len)
+static int convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
+                               opentelemetry_decode_value_type value_type,
+                               char *key, void *buf, size_t len)
 {
     int result;
 
     result = -2;
 
     switch (value_type) {
-
         case CTR_OPENTELEMETRY_TYPE_ATTRIBUTE:
             result = -1;
             break;
@@ -289,15 +288,15 @@ static int ctr_convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result == -2) {
-        printf("ctr_convert_bytes_value: unknown value type");
+        printf("convert_bytes_value: unknown value type");
     }
 
     return result;
 }
 
-static int ctr_convert_any_value(struct opentelemetry_decode_value *ctr_val,
-                                 opentelemetry_decode_value_type value_type, char *key,
-                                 Opentelemetry__Proto__Common__V1__AnyValue *val)
+static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
+                             opentelemetry_decode_value_type value_type, char *key,
+                             Opentelemetry__Proto__Common__V1__AnyValue *val)
 {
     int result;
 
@@ -309,31 +308,31 @@ static int ctr_convert_any_value(struct opentelemetry_decode_value *ctr_val,
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE:
-            result = ctr_convert_string_value(ctr_val, value_type, key, val->string_value);
+            result = convert_string_value(ctr_val, value_type, key, val->string_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_BOOL_VALUE:
-            result = ctr_convert_bool_value(ctr_val, value_type, key, val->bool_value);
+            result = convert_bool_value(ctr_val, value_type, key, val->bool_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE:
-            result = ctr_convert_int_value(ctr_val, value_type, key, val->int_value);
+            result = convert_int_value(ctr_val, value_type, key, val->int_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_DOUBLE_VALUE:
-            result = ctr_convert_double_value(ctr_val, value_type, key, val->double_value);
+            result = convert_double_value(ctr_val, value_type, key, val->double_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_ARRAY_VALUE:
-            result = ctr_convert_array_value(ctr_val, value_type, key, val->array_value);
+            result = convert_array_value(ctr_val, value_type, key, val->array_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_KVLIST_VALUE:
-            result = ctr_convert_kvlist_value(ctr_val, value_type, key, val->kvlist_value);
+            result = convert_kvlist_value(ctr_val, value_type, key, val->kvlist_value);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_BYTES_VALUE:
-            result = ctr_convert_bytes_value(ctr_val, value_type, key, val->bytes_value.data, val->bytes_value.len);
+            result = convert_bytes_value(ctr_val, value_type, key, val->bytes_value.data, val->bytes_value.len);
             break;
         }
 
@@ -367,7 +366,7 @@ static struct ctrace_attributes *convert_otel_attrs(size_t n_attributes,
         key = kv->key;
         val = kv->value;
 
-        result = ctr_convert_any_value(ctr_decoded_attributes,
+        result = convert_any_value(ctr_decoded_attributes,
                                        CTR_OPENTELEMETRY_TYPE_ATTRIBUTE,
                                        key, val);
     }
