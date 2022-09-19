@@ -1,11 +1,16 @@
+# example: simple C api usage
 set(src
-	# simple.c
-	otlp.c
+	simple-c-api.c
 	)
 
-# add_executable(ctraces-simple ${src})
-# target_link_libraries(ctraces-simple ctraces-static)
-add_executable(ctraces-otlp ${src})
-target_link_libraries(ctraces-otlp ctraces-static)
+add_executable(ctraces-simple-c-api ${src})
+target_link_libraries(ctraces-simple-c-api ctraces-static)
 
+# example: opentelemetry decoder -> ctrace
+set(src
+	otlp-decoder.c
+	)
+
+add_executable(ctraces-otlp-decoder ${src})
+target_link_libraries(ctraces-otlp-decoder ctraces-static)
 configure_file(sample_trace.bin sample_trace.bin COPYONLY)

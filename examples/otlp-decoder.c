@@ -53,5 +53,7 @@ int main()
     printf("%s\n", text);
     ctr_encode_text_destroy(text);
 
+    free(buf);
+
     return 0;
 }
