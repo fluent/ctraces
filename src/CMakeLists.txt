@@ -11,6 +11,8 @@ set(src
   ctr_attributes.c
   # encoders
   ctr_encode_text.c
+  # decoders
+  ctr_decode_opentelemetry.c
   # opentelemetry
   external/opentelemetry_common.pb-c.c
   external/opentelemetry_resource.pb-c.c
