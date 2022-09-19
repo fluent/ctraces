@@ -25,15 +25,26 @@
 struct ctrace_resource {
     uint32_t dropped_attr_count;      /* number of attributes that were discarded */
     struct ctrace_attributes *attr;   /* attributes */
-    cfl_sds_t schema_url;             /* schema_url */
-    struct cfl_list _head;            /* link to struct ctrace->resources list */
 };
 
-struct ctrace_resource *ctr_resource_create(struct ctrace *ctx);
-struct ctrace_resource *ctr_resource_create_default(struct ctrace *ctx);
-int ctr_resource_set_schema_url(struct ctrace_resource *res, char *url);
+struct ctrace_resource_span {
+    struct ctrace_resource *resource;
+    struct cfl_list scope_spans;
+    cfl_sds_t schema_url;
+    struct cfl_list _head;               /* link to ctraces->resource_span list */
+};
+
+/* resource */
+struct ctrace_resource *ctr_resource_create();
+struct ctrace_resource *ctr_resource_create_default();
 int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr);
-void ctr_resource_set_dropped_attr_count(struct ctrace_resource *res, int count);
+void ctr_resource_set_dropped_attr_count(struct ctrace_resource *res, uint32_t count);
 void ctr_resource_destroy(struct ctrace_resource *res);
+
+/* resource_span */
+struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx);
+int ctr_resource_span_set_schema_url(struct ctrace_resource_span *resource_span, char *url);
+void ctr_resource_span_set_resource(struct ctrace_resource_span *resource_span, struct ctrace_resource *resource);
+void ctr_resource_span_destroy(struct ctrace_resource_span *resource_span);
 
 #endif

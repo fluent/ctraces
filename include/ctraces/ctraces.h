@@ -26,27 +26,14 @@
 /* local libs */
 #include <cfl/cfl.h>
 
-/* headers that are needed in general */
-#include <ctraces/ctr_info.h>
-#include <ctraces/ctr_id.h>
-#include <ctraces/ctr_random.h>
-#include <ctraces/ctr_version.h>
-#include <ctraces/ctr_span.h>
-#include <ctraces/ctr_resource.h>
-#include <ctraces/ctr_attributes.h>
-#include <ctraces/ctr_log.h>
-
-/* encoders */
-#include <ctraces/ctr_encode_text.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 
 /* ctrace options creation keys */
 #define CTR_OPTS_TRACE_ID   0
 
+/* options is unused for now */
 struct ctrace_opts {
-    cfl_sds_t  trace_id;
 };
 
 struct ctrace {
@@ -55,14 +42,20 @@ struct ctrace {
      * a new span is created this value gets incremented.
      */
     uint64_t last_span_id;
-    struct cfl_list spans;
-
 
     /*
      * When the user creates a new resource, we add it to a linked list so on
      * every span we just keep a reference.
      */
-    struct cfl_list resources;
+    struct cfl_list resource_spans;
+
+    /*
+     * This 'span_list' is used for internal purposes only when a caller needs to
+     * iterate all spans linearly without getting inside a loop with resource_span, scope_spans, etc.
+     *
+     * note: every 'span' is linked to a 'scope_span' and to 'span_list' (this structure)
+     */
+    struct cfl_list span_list;
 
     /* logging */
     int log_level;
@@ -76,5 +69,21 @@ void ctr_destroy(struct ctrace *ctx);
 void ctr_opts_init(struct ctrace_opts *opts);
 void ctr_opts_set(struct ctrace_opts *opts, int value, char *val);
 void ctr_opts_exit(struct ctrace_opts *opts);
+
+/* headers that are needed in general */
+#include <ctraces/ctr_info.h>
+#include <ctraces/ctr_id.h>
+#include <ctraces/ctr_random.h>
+#include <ctraces/ctr_version.h>
+#include <ctraces/ctr_span.h>
+#include <ctraces/ctr_scope.h>
+#include <ctraces/ctr_link.h>
+#include <ctraces/ctr_attributes.h>
+#include <ctraces/ctr_log.h>
+#include <ctraces/ctr_resource.h>
+
+/* encoders */
+#include <ctraces/ctr_encode_text.h>
+
 
 #endif

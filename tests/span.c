@@ -32,26 +32,31 @@ void test_span()
     struct ctrace *ctx;
     struct ctrace_span *span_root;
     struct ctrace_span *span_child;
+    struct ctrace_resource_span *resource_span;
+    struct ctrace_scope_span *scope_span;
     struct ctrace_id *id;
     struct cfl_array *array;
     struct cfl_kvlist *kvlist;
 
     ctx = ctr_create(NULL);
 
+    resource_span = ctr_resource_span_create(ctx);
+    scope_span = ctr_scope_span_create(resource_span);
+
     /* create root span */
-    span_root = ctr_span_create(ctx, "main", NULL);
+    span_root = ctr_span_create(ctx, scope_span, "main", NULL);
     TEST_CHECK(span_root != NULL);
     TEST_CHECK(span_root->kind == CTRACE_SPAN_INTERNAL);
 
     /* set the span root a random id */
     id = ctr_id_create_random();
     TEST_CHECK(id != NULL);
-    ctr_span_set_id_with_cid(span_root, id);
+    ctr_span_set_span_id_with_cid(span_root, id);
 
     /* id is not longer needed */
     ctr_id_destroy(id);
 
-    span_child = ctr_span_create(ctx, "do-work", span_root);
+    span_child = ctr_span_create(ctx, scope_span, "do-work", span_root);
     TEST_CHECK(span_child != NULL);
 
     /* set span kind */
@@ -60,7 +65,7 @@ void test_span()
     TEST_CHECK(span_child->kind == CTRACE_SPAN_CONSUMER);
 
     /* parent id check */
-    ret = ctr_id_cmp(span_child->parent_span_id, span_root->id);
+    ret = ctr_id_cmp(span_child->parent_span_id, span_root->span_id);
     TEST_CHECK(ret == 0);
 
     /* add attributes to span_child */

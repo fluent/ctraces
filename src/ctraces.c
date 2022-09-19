@@ -26,20 +26,16 @@ void ctr_opts_init(struct ctrace_opts *opts)
 
 void ctr_opts_set(struct ctrace_opts *opts, int value, char *val)
 {
-    if (value == CTR_OPTS_TRACE_ID) {
-        opts->trace_id = cfl_sds_create(val);
-    }
+    /* unused */
+    (void) opts;
+    (void) value;
+    (void) val;
 }
 
 void ctr_opts_exit(struct ctrace_opts *opts)
 {
-
     if (!opts) {
         return;
-    }
-
-    if (opts->trace_id) {
-        cfl_sds_destroy(opts->trace_id);
     }
 }
 
@@ -53,8 +49,8 @@ struct ctrace *ctr_create(struct ctrace_opts *opts)
         ctr_errno();
         return NULL;
     }
-    cfl_list_init(&ctx->resources);
-    cfl_list_init(&ctx->spans);
+    cfl_list_init(&ctx->resource_spans);
+    cfl_list_init(&ctx->span_list);
 
     return ctx;
 }
@@ -63,19 +59,12 @@ void ctr_destroy(struct ctrace *ctx)
 {
     struct cfl_list *head;
     struct cfl_list *tmp;
-    struct ctrace_span *span;
-    struct ctrace_resource *res;
+    struct ctrace_resource_span *resource_span;
 
-    /* delete spans */
-    cfl_list_foreach_safe(head, tmp, &ctx->spans) {
-        span = cfl_list_entry(head, struct ctrace_span, _head);
-        ctr_span_destroy(span);
-    }
-
-    /* delete resouorces */
-    cfl_list_foreach_safe(head, tmp, &ctx->resources) {
-        res = cfl_list_entry(head, struct ctrace_resource, _head);
-        ctr_resource_destroy(res);
+    /* delete resources */
+    cfl_list_foreach_safe(head, tmp, &ctx->resource_spans) {
+        resource_span = cfl_list_entry(head, struct ctrace_resource_span, _head);
+        ctr_resource_span_destroy(resource_span);
     }
 
     free(ctx);

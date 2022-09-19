@@ -2,6 +2,8 @@ set(src
   ctraces.c
   ctr_resource.c
   ctr_span.c
+  ctr_link.c
+  ctr_scope.c
   ctr_log.c
   ctr_id.c
   ctr_random.c

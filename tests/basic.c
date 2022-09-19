@@ -39,15 +39,11 @@ void test_options()
 
     /* options */
     ctr_opts_init(&opts);
-    ctr_opts_set(&opts, CTR_OPTS_TRACE_ID, OPTS_TRACE_ID);
-    TEST_CHECK(strcmp(opts.trace_id, OPTS_TRACE_ID) == 0);
 
     /* create & destroy context */
     ctx = ctr_create(&opts);
 
     TEST_CHECK(ctx != NULL);
-    //TEST_CHECK(strcmp(ctx->trace_id, OPTS_TRACE_ID) == 0);
-
     ctr_destroy(ctx);
 
     /* exit options */
