@@ -120,6 +120,7 @@ int ctr_span_set_attribute_array(struct ctrace_span *span, char *key,
                                  struct cfl_array *value);
 int ctr_span_set_attribute_kvlist(struct ctrace_span *span, char *key,
                                   struct cfl_kvlist *value);
+void ctr_span_set_dropped_attributes_count(struct ctrace_span *span, int n);
 
 
 /* time */
