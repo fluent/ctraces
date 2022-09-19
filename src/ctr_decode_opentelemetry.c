@@ -150,8 +150,8 @@ static int ctr_convert_double_value(struct opentelemetry_decode_value *ctr_val,
 }
 
 static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
-           opentelemetry_decode_value_type value_type,
-           char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr)
+                                   opentelemetry_decode_value_type value_type,
+                                   char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr)
 {
     int array_index;
     int result;
@@ -159,7 +159,10 @@ static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
     Opentelemetry__Proto__Common__V1__AnyValue *val;
 
     ctr_arr_val = malloc(sizeof(struct opentelemetry_decode_value));
-
+    if (!ctr_arr_val) {
+        ctr_errno();
+        return -1;
+    }
     ctr_arr_val->cfl_arr = cfl_array_create(otel_arr->n_values);
 
     result = 0;
@@ -172,7 +175,8 @@ static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result < 0) {
-        free(ctr_arr_val->cfl_arr);
+        cfl_array_destroy(ctr_arr_val->cfl_arr);
+        free(ctr_arr_val);
         return result;
     }
 
@@ -194,8 +198,9 @@ static int ctr_convert_array_value(struct opentelemetry_decode_value *ctr_val,
 
     }
 
+    free(ctr_arr_val);
     if (result == -2) {
-        printf("ctr_convert_array_value: unknown value type");
+        fprintf(stderr, "ctr_convert_array_value: unknown value type\n");
     }
 
     return result;
@@ -211,10 +216,13 @@ static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
     Opentelemetry__Proto__Common__V1__KeyValue *kv;
 
     ctr_kvlist_val = malloc(sizeof(struct opentelemetry_decode_value));
+    if (!ctr_kvlist_val) {
+        ctr_errno();
+        return -1;
+    }
     ctr_kvlist_val->cfl_kvlist = cfl_kvlist_create();
 
     result = 0;
-
     for (kvlist_index = 0;
          kvlist_index < otel_kvlist->n_values && result ==0;
          kvlist_index++) {
@@ -224,7 +232,8 @@ static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
     }
 
     if (result < 0){
-        free(ctr_kvlist_val->cfl_kvlist);
+        cfl_kvlist_destroy(ctr_kvlist_val->cfl_kvlist);
+        free(ctr_kvlist_val);
         return result;
     }
 
@@ -245,6 +254,8 @@ static int ctr_convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
             break;
 
     }
+
+    free(ctr_kvlist_val);
 
     if (result == -2) {
         printf("ctr_convert_kvlist_value: unknown value type");
@@ -285,8 +296,8 @@ static int ctr_convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
 }
 
 static int ctr_convert_any_value(struct opentelemetry_decode_value *ctr_val,
-           opentelemetry_decode_value_type value_type, char *key,
-           Opentelemetry__Proto__Common__V1__AnyValue *val)
+                                 opentelemetry_decode_value_type value_type, char *key,
+                                 Opentelemetry__Proto__Common__V1__AnyValue *val)
 {
     int result;
 
@@ -327,19 +338,20 @@ static int ctr_convert_any_value(struct opentelemetry_decode_value *ctr_val,
         }
 
         if (result == -2) {
-            printf("ctr_convert_any_value: unknown value type");
+            return -1;
         }
 
     return result;
 }
 
 static struct ctrace_attributes *convert_otel_attrs(size_t n_attributes,
-              Opentelemetry__Proto__Common__V1__KeyValue **otel_attr)
+                                                    Opentelemetry__Proto__Common__V1__KeyValue **otel_attr)
 {
     int index_kv;
     int result;
     char *key;
     struct opentelemetry_decode_value *ctr_decoded_attributes;
+    struct ctrace_attributes *attr;
 
     Opentelemetry__Proto__Common__V1__KeyValue *kv;
     Opentelemetry__Proto__Common__V1__AnyValue *val;
@@ -361,31 +373,37 @@ static struct ctrace_attributes *convert_otel_attrs(size_t n_attributes,
     }
 
     if (result < 0) {
+        ctr_attributes_destroy(ctr_decoded_attributes->ctr_attr);
+        free(ctr_decoded_attributes);
         return NULL;
     }
 
-    return ctr_decoded_attributes->ctr_attr;
+    attr = ctr_decoded_attributes->ctr_attr;
+    free(ctr_decoded_attributes);
+    return attr;
 }
 
 static int ctr_span_set_attributes(struct ctrace_span *span,
-           size_t n_attributes,
-           Opentelemetry__Proto__Common__V1__KeyValue **attributes)
+                                   size_t n_attributes,
+                                   Opentelemetry__Proto__Common__V1__KeyValue **attributes)
 {
     struct ctrace_attributes *ctr_attributes;
 
     ctr_attributes = convert_otel_attrs(n_attributes, attributes);
-
     if (ctr_attributes == NULL) {
         return -1;
     }
 
+    if (span->attr) {
+        ctr_attributes_destroy(span->attr);
+    }
     span->attr = ctr_attributes;
     return 0;
 }
 
 static int ctr_span_set_events(struct ctrace_span *span,
-           size_t n_events,
-           Opentelemetry__Proto__Trace__V1__Span__Event **events)
+                               size_t n_events,
+                               Opentelemetry__Proto__Trace__V1__Span__Event **events)
 {
     int index_event;
     struct ctrace_span_event *ctr_event;
@@ -409,6 +427,10 @@ static int ctr_span_set_events(struct ctrace_span *span,
             return -1;
         }
 
+        if (ctr_event->attr) {
+            ctr_attributes_destroy(ctr_event->attr);
+        }
+
         ctr_event->attr = ctr_attributes;
         ctr_span_event_set_dropped_attributes_count(ctr_event, event->dropped_attributes_count);
     }
@@ -417,7 +439,7 @@ static int ctr_span_set_events(struct ctrace_span *span,
 }
 
 int ctr_resource_set_data(struct ctrace_resource *resource,
-    Opentelemetry__Proto__Resource__V1__Resource *otel_resource)
+                          Opentelemetry__Proto__Resource__V1__Resource *otel_resource)
 {
     struct ctrace_attributes *ctr_attributes;
 
@@ -434,20 +456,25 @@ int ctr_resource_set_data(struct ctrace_resource *resource,
 }
 
 void ctr_scope_span_set_scope(struct ctrace_scope_span *scope_span,
-     Opentelemetry__Proto__Common__V1__InstrumentationScope *scope)
+                              Opentelemetry__Proto__Common__V1__InstrumentationScope *scope)
 {
     struct ctrace_attributes *ctr_attributes;
+    struct ctrace_instrumentation_scope *ins_scope;
 
     ctr_attributes = convert_otel_attrs(scope->n_attributes, scope->attributes);
-
     if (ctr_attributes == NULL) {
         return;
     }
 
-    ctr_instrumentation_scope_create(scope->name, scope->version,
-                                     scope->dropped_attributes_count,
-                                     ctr_attributes);
+    ins_scope = ctr_instrumentation_scope_create(scope->name, scope->version,
+                                                 scope->dropped_attributes_count,
+                                                 ctr_attributes);
+    if (!ins_scope) {
+        ctr_attributes_destroy(ctr_attributes);
+        return;
+    }
 
+    ctr_scope_span_set_instrumentation_scope(scope_span, ins_scope);
 }
 
 void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
@@ -499,8 +526,9 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     Opentelemetry__Proto__Trace__V1__ScopeSpans *otel_scope_span;
     Opentelemetry__Proto__Trace__V1__Span *otel_span;
 
-    service_request = opentelemetry__proto__collector__trace__v1__export_trace_service_request__unpack(NULL, in_size - *offset, (unsigned char *) &in_buf[*offset]);
-
+    service_request = opentelemetry__proto__collector__trace__v1__export_trace_service_request__unpack(NULL,
+                                                                                                      in_size - *offset,
+                                                                                                      (unsigned char *) &in_buf[*offset]);
     if (service_request == NULL) {
         return -1;
     }
@@ -510,6 +538,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     for (resource_span_index = 0; resource_span_index < service_request->n_resource_spans; resource_span_index++) {
         otel_resource_span = service_request->resource_spans[resource_span_index];
         if (otel_resource_span == NULL) {
+            opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
             return -1;
         }
 
@@ -523,6 +552,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
         for (scope_span_index = 0; scope_span_index < otel_resource_span->n_scope_spans; scope_span_index++) {
             otel_scope_span = otel_resource_span->scope_spans[scope_span_index];
             if (otel_scope_span == NULL) {
+                opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
                 return -1;
             }
 
@@ -533,12 +563,13 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
             for (span_index = 0; span_index < otel_scope_span->n_spans; span_index++) {
                 otel_span = otel_scope_span->spans[span_index];
                 if (otel_span == NULL) {
+                    opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
                     return -1;
                 }
 
                 ctr_span = ctr_span_create(ctr, ctr_scope_span, otel_span->name, NULL);
 
-                // copy data from otel span to ctraces span representation
+                /* copy data from otel span to ctraces span representation */
                 ctr_span_set_trace_id(ctr_span, otel_span->trace_id.data, otel_span->trace_id.len);
                 ctr_span_set_span_id(ctr_span, otel_span->span_id.data, otel_span->span_id.len);
                 ctr_span_set_parent_span_id(ctr_span, otel_span->parent_span_id.data, otel_span->parent_span_id.len);
@@ -555,6 +586,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
         }
     }
 
+    opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
     *out_ctr = ctr;
 
     return 0;
