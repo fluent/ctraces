@@ -231,7 +231,7 @@ void ctr_span_start(struct ctrace *ctx, struct ctrace_span *span)
 void ctr_span_start_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts)
 {
     /* set the initial timestamp */
-    span->start_time = ts;
+    span->start_time_unix_nano = ts;
 
     /* always set the span end time as the start time, so duration can be zero */
     ctr_span_end_ts(ctx, span, ts);
@@ -247,7 +247,7 @@ void ctr_span_end(struct ctrace *ctx, struct ctrace_span *span)
 
 void ctr_span_end_ts(struct ctrace *ctx, struct ctrace_span *span, uint64_t ts)
 {
-    span->end_time = ts;
+    span->end_time_unix_nano = ts;
 }
 
 int ctr_span_set_status(struct ctrace_span *span, int code, char *message)
@@ -359,10 +359,10 @@ struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *
 
     /* if no timestamp is given, use the current time */
     if (ts == 0) {
-        ev->timestamp = cfl_time_now();
+        ev->time_unix_nano = cfl_time_now();
     }
     else {
-        ev->timestamp = ts;
+        ev->time_unix_nano = ts;
     }
 
     cfl_list_add(&ev->_head, &span->events);
