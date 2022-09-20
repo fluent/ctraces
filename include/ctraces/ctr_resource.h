@@ -43,8 +43,8 @@ void ctr_resource_destroy(struct ctrace_resource *res);
 
 /* resource_span */
 struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx);
+struct ctrace_resource *ctr_resource_span_get_resource(struct ctrace_resource_span *resource_span);
 int ctr_resource_span_set_schema_url(struct ctrace_resource_span *resource_span, char *url);
-void ctr_resource_span_set_resource(struct ctrace_resource_span *resource_span, struct ctrace_resource *resource);
 void ctr_resource_span_destroy(struct ctrace_resource_span *resource_span);
 
 #endif

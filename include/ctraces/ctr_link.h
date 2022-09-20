@@ -28,6 +28,8 @@ struct ctrace_link {
 	cfl_sds_t trace_state;            /* trace_state           */
     struct ctrace_attributes *attr;   /* attributes */
     uint32_t dropped_attr_count;      /* number of attributes that were discarded */
+
+    /* --- INTERNAL --- */
     struct cfl_list _head;            /* link to 'struct span->links' list */
 };
 
