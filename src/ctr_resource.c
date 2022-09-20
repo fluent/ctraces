@@ -44,7 +44,6 @@ struct ctrace_resource *ctr_resource_create()
 struct ctrace_resource *ctr_resource_create_default()
 {
     struct ctrace_resource *res;
-    struct ctrace_attributes *attr;
 
     res = ctr_resource_create();
     if (!res) {
@@ -52,10 +51,9 @@ struct ctrace_resource *ctr_resource_create_default()
     }
 
     /* some default attributes */
-    ctr_attributes_set_string(attr, "service.name", "Fluent Bit");
-    ctr_attributes_set_int64(attr, "release_year", 2014);
+    ctr_attributes_set_string(res->attr, "service.name", "Fluent Bit");
+    ctr_attributes_set_int64(res->attr, "release_year", 2014);
 
-    ctr_resource_set_attributes(res, attr);
     return res;
 }
 
