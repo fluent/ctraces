@@ -437,18 +437,18 @@ static int ctr_span_set_events(struct ctrace_span *span,
     return 0;
 }
 
-int ctr_resource_set_data(struct ctrace_resource *resource,
-                          Opentelemetry__Proto__Resource__V1__Resource *otel_resource)
+static int resource_set_data(struct ctrace_resource *resource,
+                             Opentelemetry__Proto__Resource__V1__Resource *otel_resource)
 {
-    struct ctrace_attributes *ctr_attributes;
+    struct ctrace_attributes *attributes;
 
-    ctr_attributes = convert_otel_attrs(otel_resource->n_attributes, otel_resource->attributes);
+    attributes = convert_otel_attrs(otel_resource->n_attributes, otel_resource->attributes);
 
-    if (ctr_attributes == NULL) {
+    if (attributes == NULL) {
         return -1;
     }
 
-    ctr_resource_set_attributes(resource, ctr_attributes);
+    ctr_resource_set_attributes(resource, attributes);
     ctr_resource_set_dropped_attr_count(resource, otel_resource->dropped_attributes_count);
 
     return 0;
@@ -515,10 +515,10 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     size_t scope_span_index;
     size_t span_index;
     struct ctrace *ctr;
-    struct ctrace_span *ctr_span;
-    struct ctrace_resource *ctr_resource;
-    struct ctrace_resource_span *ctr_resource_span;
-    struct ctrace_scope_span *ctr_scope_span;
+    struct ctrace_span *span;
+    struct ctrace_resource *resource;
+    struct ctrace_resource_span *resource_span;
+    struct ctrace_scope_span *scope_span;
 
     Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest *service_request;
     Opentelemetry__Proto__Trace__V1__ResourceSpans *otel_resource_span;
@@ -541,12 +541,13 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
             return -1;
         }
 
-        ctr_resource = ctr_resource_create(ctr);
-        ctr_resource_set_data(ctr_resource, otel_resource_span->resource);
+        /* resource span */
+        resource_span = ctr_resource_span_create(ctr);
+        ctr_resource_span_set_schema_url(resource_span, otel_resource_span->schema_url);
 
-        ctr_resource_span = ctr_resource_span_create(ctr);
-        ctr_resource_span_set_resource(ctr_resource_span, ctr_resource);
-        ctr_resource_span_set_schema_url(ctr_resource_span, otel_resource_span->schema_url);
+        /* resource */
+        resource = ctr_resource_span_get_resource(resource_span);
+        resource_set_data(resource, otel_resource_span->resource);
 
         for (scope_span_index = 0; scope_span_index < otel_resource_span->n_scope_spans; scope_span_index++) {
             otel_scope_span = otel_resource_span->scope_spans[scope_span_index];
@@ -555,9 +556,9 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                 return -1;
             }
 
-            ctr_scope_span = ctr_scope_span_create(ctr_resource_span);
-            ctr_scope_span_set_schema_url(ctr_scope_span, otel_scope_span->schema_url);
-            ctr_scope_span_set_scope(ctr_scope_span, otel_scope_span->scope);
+            scope_span = ctr_scope_span_create(resource_span);
+            ctr_scope_span_set_schema_url(scope_span, otel_scope_span->schema_url);
+            ctr_scope_span_set_scope(scope_span, otel_scope_span->scope);
 
             for (span_index = 0; span_index < otel_scope_span->n_spans; span_index++) {
                 otel_span = otel_scope_span->spans[span_index];
@@ -566,21 +567,21 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                     return -1;
                 }
 
-                ctr_span = ctr_span_create(ctr, ctr_scope_span, otel_span->name, NULL);
+                span = ctr_span_create(ctr, scope_span, otel_span->name, NULL);
 
                 /* copy data from otel span to ctraces span representation */
-                ctr_span_set_trace_id(ctr_span, otel_span->trace_id.data, otel_span->trace_id.len);
-                ctr_span_set_span_id(ctr_span, otel_span->span_id.data, otel_span->span_id.len);
-                ctr_span_set_parent_span_id(ctr_span, otel_span->parent_span_id.data, otel_span->parent_span_id.len);
-                ctr_span_kind_set(ctr_span, otel_span->kind);
-                ctr_span_start_ts(ctr, ctr_span, otel_span->start_time_unix_nano);
-                ctr_span_end_ts(ctr, ctr_span, otel_span->end_time_unix_nano);
-                ctr_span_set_status(ctr_span, otel_span->status->code, otel_span->status->message);
-                ctr_span_set_attributes(ctr_span, otel_span->n_attributes, otel_span->attributes);
-                ctr_span_set_events(ctr_span, otel_span->n_events, otel_span->events);
-                ctr_span_set_dropped_attributes_count(ctr_span, otel_span->dropped_attributes_count);
-                ctr_span_set_dropped_events_count(ctr_span, otel_span->dropped_events_count);
-                ctr_span_set_links(ctr_span, otel_span->n_links, otel_span->links);
+                ctr_span_set_trace_id(span, otel_span->trace_id.data, otel_span->trace_id.len);
+                ctr_span_set_span_id(span, otel_span->span_id.data, otel_span->span_id.len);
+                ctr_span_set_parent_span_id(span, otel_span->parent_span_id.data, otel_span->parent_span_id.len);
+                ctr_span_kind_set(span, otel_span->kind);
+                ctr_span_start_ts(ctr, span, otel_span->start_time_unix_nano);
+                ctr_span_end_ts(ctr, span, otel_span->end_time_unix_nano);
+                ctr_span_set_status(span, otel_span->status->code, otel_span->status->message);
+                ctr_span_set_attributes(span, otel_span->n_attributes, otel_span->attributes);
+                ctr_span_set_events(span, otel_span->n_events, otel_span->events);
+                ctr_span_set_dropped_attributes_count(span, otel_span->dropped_attributes_count);
+                ctr_span_set_dropped_events_count(span, otel_span->dropped_events_count);
+                ctr_span_set_links(span, otel_span->n_links, otel_span->links);
             }
         }
     }

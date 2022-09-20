@@ -48,18 +48,17 @@ struct ctrace_span_status {
 };
 
 struct ctrace_span_event {
-    cfl_sds_t name;
-    uint64_t timestamp;
+    uint64_t time_unix_nano;
 
-    /* number of attributes that were discarded */
-    uint32_t dropped_attr_count;
+    cfl_sds_t name;
 
     /* event attributes */
     struct ctrace_attributes *attr;
 
-    /* fixme: implement it! */
-    void *links;
+    /* number of attributes that were discarded */
+    uint32_t dropped_attr_count;
 
+    /* ---- INTERNAL --- */
     struct cfl_list _head;
 };
 
@@ -70,17 +69,24 @@ struct ctrace_span {
     struct ctrace_id *parent_span_id; /* any parent ? a NULL means a root span */
     cfl_sds_t trace_state;            /* trace state */
 
-    int kind;                         /* span kind */
-    uint64_t start_time;              /* start time */
-    uint64_t end_time;                /* end time */
-    uint32_t dropped_attr_count;      /* number of attributes that were discarded */
-    uint32_t dropped_events_count;    /* number of events that were discarded */
-
     cfl_sds_t name;                   /* user-name assigned */
 
+    int kind;                         /* span kind */
+    uint64_t start_time_unix_nano;    /* start time */
+    uint64_t end_time_unix_nano;      /* end time */
+
     struct ctrace_attributes *attr;   /* attributes */
+    uint32_t dropped_attr_count;      /* number of attributes that were discarded */
+
     struct cfl_list events;           /* events     */
+    uint32_t dropped_events_count;    /* number of events that were discarded */
+
+    struct cfl_list links;            /* links */
+    uint32_t dropped_links_count;     /* number of links that were discarded */
+
     struct ctrace_span_status status; /* status code */
+
+    /* --- INTERNAL --- */
 
     /* link to 'struct scope_span->spans' list */
     struct cfl_list _head;
@@ -88,7 +94,6 @@ struct ctrace_span {
     /* link to global list on 'struct ctrace->span_list' */
     struct cfl_list _head_global;
 
-    struct cfl_list links;
 
     /* references from parent contexts */
     struct ctrace_scope_span *scope_span;

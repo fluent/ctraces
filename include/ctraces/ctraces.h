@@ -25,6 +25,7 @@
 
 /* local libs */
 #include <cfl/cfl.h>
+#include <mpack/mpack.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,11 +83,13 @@ void ctr_opts_exit(struct ctrace_opts *opts);
 #include <ctraces/ctr_log.h>
 #include <ctraces/ctr_resource.h>
 
+/* encoders */
+#include <ctraces/ctr_encode_text.h>
+#include <ctraces/ctr_encode_msgpack.h>
+
 /* decoders */
 #include <ctraces/ctr_decode_opentelemetry.h>
 
-/* encoders */
-#include <ctraces/ctr_encode_text.h>
 
 
 #endif
