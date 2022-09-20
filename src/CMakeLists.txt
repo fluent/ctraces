@@ -11,6 +11,7 @@ set(src
   ctr_attributes.c
   # encoders
   ctr_encode_text.c
+  ctr_encode_msgpack.c
   # decoders
   ctr_decode_opentelemetry.c
   # opentelemetry
