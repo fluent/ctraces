@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 
 #include <ctraces/ctraces.h>
+#include <unistd.h>
 
 int main()
 {
@@ -41,8 +42,8 @@ int main()
     ctr_resource_span_set_schema_url(resource_span, "https://ctraces/resource_span_schema_url");
 
     /* create a 'resource' for the 'resource span' in question */
-    resource = ctr_resource_create_default();
-    ctr_resource_span_set_resource(resource_span, resource);
+    resource = ctr_resource_span_get_resource(resource_span);
+    ctr_resource_set_dropped_attr_count(resource, 5);
 
     /* scope span */
     scope_span = ctr_scope_span_create(resource_span);
