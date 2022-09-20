@@ -23,12 +23,20 @@
 struct ctrace_resource *ctr_resource_create()
 {
     struct ctrace_resource *res;
+    struct ctrace_attributes *attr;
 
     res = calloc(1, sizeof(struct ctrace_resource));
     if (!res) {
         ctr_errno();
         return NULL;
     }
+
+    attr = ctr_attributes_create();
+    if (!attr) {
+        ctr_resource_destroy(res);
+        return NULL;
+    }
+    res->attr = attr;
 
     return res;
 }
@@ -40,12 +48,6 @@ struct ctrace_resource *ctr_resource_create_default()
 
     res = ctr_resource_create();
     if (!res) {
-        return NULL;
-    }
-
-    attr = ctr_attributes_create();
-    if (!attr) {
-        ctr_resource_destroy(res);
         return NULL;
     }
 
@@ -61,6 +63,10 @@ int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attri
 {
     if (!attr) {
         return -1;
+    }
+
+    if (res->attr) {
+        ctr_attributes_destroy(res->attr);
     }
 
     res->attr = attr;
@@ -100,7 +106,19 @@ struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx)
     /* link to ctraces context */
     cfl_list_add(&resource_span->_head, &ctx->resource_spans);
 
+    /* create an empty resource */
+    resource_span->resource = ctr_resource_create();
+    if (!resource_span->resource) {
+        free(resource_span);
+        return NULL;
+    }
+
     return resource_span;
+}
+
+struct ctrace_resource *ctr_resource_span_get_resource(struct ctrace_resource_span *resource_span)
+{
+    return resource_span->resource;
 }
 
 /* Set the schema_url for a resource_span */
@@ -116,12 +134,6 @@ int ctr_resource_span_set_schema_url(struct ctrace_resource_span *resource_span,
     }
 
     return 0;
-}
-
-void ctr_resource_span_set_resource(struct ctrace_resource_span *resource_span,
-                                    struct ctrace_resource *resource)
-{
-    resource_span->resource = resource;
 }
 
 void ctr_resource_span_destroy(struct ctrace_resource_span *resource_span)
