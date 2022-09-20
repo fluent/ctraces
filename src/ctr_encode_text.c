@@ -156,7 +156,7 @@ static void format_event(cfl_sds_t *buf, struct ctrace_span_event *event, int le
     sds_cat_safe(buf, tmp);
     off += 4;
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- timestamp               : %" PRIu64 "\n", off, "", event->timestamp);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- timestamp               : %" PRIu64 "\n", off, "", event->time_unix_nano);
     sds_cat_safe(buf, tmp);
 
     snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_attributes_count: %" PRIu32 "\n", off, "", event->dropped_attr_count);
@@ -224,19 +224,24 @@ static void format_span(cfl_sds_t *buf, struct ctrace *ctx, struct ctrace_span *
     sds_cat_safe(buf, tmp);
     cfl_sds_destroy(id_hex);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- kind                    : %i (%s)\n", min, "", span->kind, ctr_span_kind_string(span));
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- kind                    : %i (%s)\n", min, "",
+             span->kind, ctr_span_kind_string(span));
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- start_time              : %" PRIu64 "\n", min, "", span->start_time);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- start_time              : %" PRIu64 "\n", min, "",
+             span->start_time_unix_nano);
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- end_time                : %" PRIu64 "\n", min, "", span->end_time);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- end_time                : %" PRIu64 "\n", min, "",
+             span->end_time_unix_nano);
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_attributes_count: %" PRIu32 "\n", min, "", span->dropped_attr_count);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_attributes_count: %" PRIu32 "\n", min, "",
+             span->dropped_attr_count);
     sds_cat_safe(buf, tmp);
 
-    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_events_count    : %" PRIu32 "\n", min, "", span->dropped_events_count);
+    snprintf(tmp, sizeof(tmp) - 1, "%*s- dropped_events_count    : %" PRIu32 "\n", min, "",
+             span->dropped_events_count);
     sds_cat_safe(buf, tmp);
 
     /* Status */
