@@ -27,7 +27,7 @@ endif()
 # CTraces Version
 set(CTR_VERSION_MAJOR  0)
 set(CTR_VERSION_MINOR  1)
-set(CTR_VERSION_PATCH  0)
+set(CTR_VERSION_PATCH  1)
 set(CTR_VERSION_STR "${CTR_VERSION_MAJOR}.${CTR_VERSION_MINOR}.${CTR_VERSION_PATCH}")
 
 # Define __FILENAME__ consistently across Operating Systems
@@ -134,10 +134,9 @@ check_c_source_compiles("
 # Check if 'C Floppy' library is available in the environment, if not,
 # we will try to build a local copy at a later stage
 check_c_source_compiles("
-  #include <cfl/cfl.h>
+  #include <cfl/cfl_found.h>
   int main() {
-     cfl_init();
-     return 0;
+     return cfl_found();
   }" CTR_HAVE_CFL)
 if(CTR_HAVE_CFL)
   CTR_DEFINITION(CTR_HAVE_CFL)
