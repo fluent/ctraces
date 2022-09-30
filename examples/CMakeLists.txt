@@ -4,7 +4,7 @@ set(src
 	)
 
 add_executable(ctraces-simple-c-api ${src})
-target_link_libraries(ctraces-simple-c-api ctraces-static)
+target_link_libraries(ctraces-simple-c-api ctraces-static fluent-otel-proto)
 
 # example: opentelemetry decoder -> ctrace
 set(src
