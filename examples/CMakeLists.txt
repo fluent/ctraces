@@ -14,3 +14,11 @@ set(src
 add_executable(ctraces-otlp-decoder ${src})
 target_link_libraries(ctraces-otlp-decoder ctraces-static)
 configure_file(sample_trace.bin sample_trace.bin COPYONLY)
+
+# example: opentelemetry encoder
+set(src
+	otlp-encoder.c
+	)
+
+add_executable(ctraces-otlp-encoder ${src})
+target_link_libraries(ctraces-otlp-encoder ctraces-static curl)

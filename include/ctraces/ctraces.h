@@ -86,6 +86,7 @@ void ctr_opts_exit(struct ctrace_opts *opts);
 /* encoders */
 #include <ctraces/ctr_encode_text.h>
 #include <ctraces/ctr_encode_msgpack.h>
+#include <ctraces/ctr_encode_opentelemetry.h>
 
 /* decoders */
 #include <ctraces/ctr_decode_opentelemetry.h>
