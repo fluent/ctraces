@@ -15,17 +15,11 @@ set(src
   ctr_encode_opentelemetry.c
   # decoders
   ctr_decode_opentelemetry.c
-  # opentelemetry
-  external/opentelemetry_common.pb-c.c
-  external/opentelemetry_resource.pb-c.c
-  external/opentelemetry_trace.pb-c.c
-  external/opentelemetry_trace_service.pb-c.c
-  external/protobuf-c.c
   )
 
 # Static Library
 add_library(ctraces-static STATIC ${src})
-target_link_libraries(ctraces-static mpack-static cfl-static)
+target_link_libraries(ctraces-static mpack-static cfl-static fluent-otel-proto)
 
 # Install Library
 if(MSVC)

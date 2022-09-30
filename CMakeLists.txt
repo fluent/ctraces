@@ -51,6 +51,7 @@ endif()
 
 # Bundled libraries
 include(cmake/libraries.cmake)
+include(cmake/headers.cmake)
 
 # Include headers and dependency headers
 include_directories(
@@ -187,6 +188,15 @@ if (NOT CTR_HAVE_CFL)
   add_subdirectory(lib/cfl)
   CTR_DEFINITION(CTR_HAVE_CFL)
   CTR_DEFINITION(CTR_HAVE_CFL_INTERNAL)
+endif()
+
+# fluent-otel-proto
+if (NOT CTR_HAVE_FLUENT_OTEL_PROTO)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${CTR_PATH_LIB_FLUENT_OTEL_PROTO}/include)
+  CTR_OPTION(FLUENT_PROTO_EXAMPLES "off")
+  add_subdirectory(lib/fluent-otel-proto)
+  CTR_DEFINITION(CTR_HAVE_FLUENT_OTEL_PROTO)
+  CTR_DEFINITION(CTR_HAVE_FLUENT_OTEL_PROTO_INTERNAL)
 endif()
 
 # Source code

@@ -17,9 +17,9 @@
  *  limitations under the License.
  */
 
-#include <opentelemetry/opentelemetry_trace_service.pb-c.h>
 #include <ctraces/ctraces.h>
 #include <cfl/cfl_array.h>
+#include <fluent-otel-proto/fluent-otel.h>
 
 static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
                              opentelemetry_decode_value_type value_type, char *key,

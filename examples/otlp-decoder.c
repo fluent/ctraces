@@ -1,4 +1,5 @@
 #include <ctraces/ctraces.h>
+#include <fluent-otel-proto/fluent-otel.h>
 
 int main()
 {
