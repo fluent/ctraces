@@ -16,7 +16,7 @@ Get into the project directory and retrieve submodules:
 
 ```shell
 cd ctraces
-git submodule update --remote
+git submodule update --init --recursive --remote
 ```
 
 Compile:
