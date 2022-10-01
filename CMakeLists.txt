@@ -143,6 +143,17 @@ if(CTR_HAVE_CFL)
   CTR_DEFINITION(CTR_HAVE_CFL)
 endif()
 
+# Check if fluent-otel-proto library is available in the environment, if not,
+# we will try to build a local copy at a later stage
+check_c_source_compiles("
+  #include <fluent-otel-proto/fluent-otel_found.h>
+  int main() {
+     return fluent_otel_found();
+  }" CTR_HAVE_FLUENT_OTEL_PROTO)
+if(CTR_HAVE_FLUENT_OTEL_PROTO)
+  CTR_DEFINITION(CTR_HAVE_FLUENT_OTEL_PROTO)
+endif()
+
 configure_file(
   "${PROJECT_SOURCE_DIR}/include/ctraces/ctr_info.h.in"
   "${PROJECT_SOURCE_DIR}/include/ctraces/ctr_info.h"
