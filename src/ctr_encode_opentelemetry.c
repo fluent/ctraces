@@ -18,7 +18,7 @@
  */
 
 #include <ctraces/ctraces.h>
-#include <opentelemetry/opentelemetry_trace_service.pb-c.h>
+#include <fluent-otel-proto/fluent-otel.h>
 
 static inline Opentelemetry__Proto__Common__V1__AnyValue *ctr_variant_to_otlp_any_value(struct cfl_variant *value);
 static inline Opentelemetry__Proto__Common__V1__KeyValue *ctr_variant_kvpair_to_otlp_kvpair(struct cfl_kvpair *input_pair);
