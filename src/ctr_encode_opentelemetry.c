@@ -1307,6 +1307,7 @@ cfl_sds_t ctr_encode_opentelemetry_create(struct ctrace *ctr)
     if (!buf) {
         return NULL;
     }
+    cfl_sds_set_len(buf, len);
 
     opentelemetry__proto__collector__trace__v1__export_trace_service_request__pack(req, (uint8_t *)buf);
 
