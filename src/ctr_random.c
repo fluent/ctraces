@@ -61,6 +61,8 @@ ssize_t ctr_random_get(void *buf, size_t len)
         close(fd);
         return ret;
     }
+#else /* Windows ? */
+    RtlGenRandom(buf, len);
 #endif
 
     s = time(NULL);
