@@ -22,6 +22,10 @@
 
 #ifdef _WIN32
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <windows.h>
+
 #ifndef ssize_t
 typedef SSIZE_T ssize_t;
 #endif
