@@ -23,6 +23,9 @@
 #define CTR_FALSE   0
 #define CTR_TRUE    !CTR_FALSE
 
+#include <ctraces/ctr_info.h>
+#include <ctraces/ctr_compat.h>
+
 /* local libs */
 #include <cfl/cfl.h>
 #include <mpack/mpack.h>
@@ -35,6 +38,8 @@
 
 /* options is unused for now */
 struct ctrace_opts {
+    /* windows compiler: error C2016: C requires that a struct or union have at least one member */
+    int _make_windows_happy;
 };
 
 struct ctrace {

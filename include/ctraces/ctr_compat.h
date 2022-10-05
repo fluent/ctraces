@@ -17,11 +17,19 @@
  *  limitations under the License.
  */
 
-#ifndef CTR_RANDOM_H
-#define CTR_RANDOM_H
+#ifndef CTR_COMPAT_H
+#define CTR_COMPAT_H
 
-#include <ctraces/ctraces.h>
+#ifdef _WIN32
 
-ssize_t ctr_random_get(void *buf, size_t len);
-
+#ifndef ssize_t
+typedef SSIZE_T ssize_t;
 #endif
+
+
+#else
+#include <unistd.h>
+
+#endif /* !_WIN32 */
+
+#endif /* !CTR_COMPAT_H */
