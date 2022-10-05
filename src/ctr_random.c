@@ -61,9 +61,6 @@ ssize_t ctr_random_get(void *buf, size_t len)
         close(fd);
         return ret;
     }
-#else /* Windows ? */
-    RtlGenRandom(buf, len);
-#endif
 
     s = time(NULL);
 
@@ -73,6 +70,9 @@ ssize_t ctr_random_get(void *buf, size_t len)
         /* fixme: we need a good entropy here */
         tmp[i] = rand_r(&s);
     }
+#else /* Windows ? */
+    ret = RtlGenRandom(buf, len);
+#endif
 
     return ret;
 }
