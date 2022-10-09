@@ -125,12 +125,15 @@ int ctr_mpack_consume_uint_tag(mpack_reader_t *reader, uint64_t *output_buffer)
         return CTR_MPACK_ENGINE_ERROR;
     }
 
-    if (mpack_type_int  != mpack_tag_type(&tag) &&
-        mpack_type_uint != mpack_tag_type(&tag)) {
+    if (mpack_type_int == mpack_tag_type(&tag)) {
+        *output_buffer = (uint64_t) mpack_tag_int_value(&tag);
+    }
+    else if (mpack_type_uint == mpack_tag_type(&tag)) {
+        *output_buffer = (uint64_t) mpack_tag_uint_value(&tag);
+    }
+    else {
         return CTR_MPACK_UNEXPECTED_DATA_TYPE_ERROR;
     }
-
-    *output_buffer = mpack_tag_uint_value(&tag);
 
     return CTR_MPACK_SUCCESS;
 }
@@ -172,12 +175,15 @@ int ctr_mpack_consume_int_tag(mpack_reader_t *reader, int64_t *output_buffer)
         return CTR_MPACK_ENGINE_ERROR;
     }
 
-    if (mpack_type_int  != mpack_tag_type(&tag) &&
-        mpack_type_uint != mpack_tag_type(&tag)) {
+    if (mpack_type_int == mpack_tag_type(&tag)) {
+        *output_buffer = (int64_t) mpack_tag_int_value(&tag);
+    }
+    else if (mpack_type_uint == mpack_tag_type(&tag)) {
+        *output_buffer = (int64_t) mpack_tag_uint_value(&tag);
+    }
+    else {
         return CTR_MPACK_UNEXPECTED_DATA_TYPE_ERROR;
     }
-
-    *output_buffer = mpack_tag_int_value(&tag);
 
     return CTR_MPACK_SUCCESS;
 }
