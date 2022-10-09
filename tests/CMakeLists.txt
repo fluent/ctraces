@@ -1,4 +1,5 @@
 set(UNIT_TESTS_FILES
+  decoding.c
   basic.c
   span.c
   )
