@@ -20,7 +20,6 @@
 #define _GNU_SOURCE
 #endif
 
-#include <unistd.h>
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_encode_msgpack.h>
 #include <ctraces/ctr_decode_msgpack.h>
