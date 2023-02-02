@@ -117,6 +117,11 @@ int ctr_span_set_span_id(struct ctrace_span *span, void *buf, size_t len)
         return -1;
     }
 
+    /* If span_id is already set, free it first */
+    if (span->span_id) {
+        ctr_id_destroy(span->span_id);
+    }
+
     span->span_id = ctr_id_create(buf, len);
     if (!span->span_id) {
         return -1;
