@@ -239,6 +239,10 @@ static int unpack_link_trace_id(mpack_reader_t *reader, size_t index, void *ctx)
     result = ctr_mpack_consume_binary_tag(reader, &value);
 
     if (result == CTR_MPACK_SUCCESS) {
+        /* If trace_id is already set, free it first */
+        if (context->link->trace_id != NULL) {
+            ctr_id_destroy(context->link->trace_id);
+        }
         context->link->trace_id = ctr_id_create(value, cfl_sds_len(value));
 
         cfl_sds_destroy(value);
