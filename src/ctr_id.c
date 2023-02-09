@@ -242,11 +242,12 @@ struct ctrace_id *ctr_id_from_base16(cfl_sds_t id)
         input_index++;
     }
 
-    if (!result) {
-        return NULL;
+    if (result) {
+        result_id = ctr_id_create(decoded_id, length / 2);
     }
-
-    result_id = ctr_id_create(decoded_id, length / 2);
+    else {
+        result_id = NULL;
+    }
 
     cfl_sds_destroy(decoded_id);
 
