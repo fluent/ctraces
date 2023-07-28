@@ -17,6 +17,7 @@
  *  limitations under the License.
  */
 
+#include <ctraces/ctr_decode_msgpack.h>
 #include <ctraces/ctr_mpack_utils.h>
 #include <cfl/cfl_sds.h>
 #include <mpack/mpack.h>
@@ -391,6 +392,13 @@ int ctr_mpack_unpack_map(mpack_reader_t *reader,
         if (mpack_ok != mpack_reader_error(reader))
         {
             return CTR_MPACK_PENDING_MAP_ENTRIES;
+        }
+    }
+    else {
+        struct ctr_msgpack_decode_context *context_to_free = context;
+        if (context_to_free->span->trace_state != NULL) {
+            cfl_sds_destroy(context_to_free->span->trace_state);
+            context_to_free->span->trace_state = NULL;
         }
     }
 
