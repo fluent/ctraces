@@ -116,7 +116,9 @@ int ctr_span_set_span_id(struct ctrace_span *span, void *buf, size_t len)
     if (!buf || len <= 0) {
         return -1;
     }
-
+    if (span->span_id) {
+        ctr_id_destroy(span->span_id);
+    }
     span->span_id = ctr_id_create(buf, len);
     if (!span->span_id) {
         return -1;
@@ -313,6 +315,9 @@ void ctr_span_destroy(struct ctrace_span *span)
     /* attributes */
     if (span->attr) {
         ctr_attributes_destroy(span->attr);
+    }
+    if (span->trace_state) {
+        cfl_sds_destroy(span->trace_state);
     }
 
     /* events */
