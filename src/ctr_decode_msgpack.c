@@ -719,8 +719,10 @@ int ctr_decode_msgpack_create(struct ctrace **out_context, char *in_buf, size_t 
     *offset += in_size - remainder;
 
     mpack_reader_destroy(&reader);
+
     if (result != CTR_DECODE_MSGPACK_SUCCESS) {
         ctr_destroy(context.trace);
+
         context.trace = NULL;
     }
 
