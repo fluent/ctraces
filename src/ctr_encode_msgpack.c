@@ -418,7 +418,9 @@ static void pack_scope_spans(mpack_writer_t *writer, struct cfl_list *scope_span
 
         /* scope */
         mpack_write_cstr(writer, "scope");
-        pack_instrumentation_scope(writer, scope_span->instrumentation_scope);
+        if (scope_span->instrumentation_scope) {
+            pack_instrumentation_scope(writer, scope_span->instrumentation_scope);
+        }
 
         /* spans */
         mpack_write_cstr(writer, "spans");
