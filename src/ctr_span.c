@@ -34,7 +34,7 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_scope_span
 
     /* allocate a spanc context */
     span = calloc(1, sizeof(struct ctrace_span));
-    if (!span) {
+    if (span == NULL) {
         ctr_errno();
         return NULL;
     }
@@ -45,14 +45,14 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_scope_span
 
     /* name */
     span->name = cfl_sds_create(name);
-    if (!span->name) {
+    if (span->name == NULL) {
         free(span);
         return NULL;
     }
 
     /* attributes */
     span->attr = ctr_attributes_create();
-    if (!span->attr) {
+    if (span->attr == NULL) {
         free(span);
         return NULL;
     }
@@ -351,17 +351,17 @@ struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *
 {
     struct ctrace_span_event *ev;
 
-    if (!name) {
+    if (name == NULL) {
         return NULL;
     }
 
     ev = calloc(1, sizeof(struct ctrace_span_event));
-    if (!ev) {
+    if (ev == NULL) {
         ctr_errno();
         return NULL;
     }
     ev->name = cfl_sds_create(name);
-    if (!ev->name) {
+    if (ev->name == NULL) {
         free(ev);
         return NULL;
     }
