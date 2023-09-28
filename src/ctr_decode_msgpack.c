@@ -124,7 +124,7 @@ static int unpack_instrumentation_scope_attributes(mpack_reader_t *reader, size_
             return CTR_DECODE_MSGPACK_VARIANT_DECODE_ERROR;
         }
 
-        if (context->scope_span->instrumentation_scope->attr) {
+        if (context->scope_span->instrumentation_scope->attr != NULL) {
             ctr_attributes_destroy(context->scope_span->instrumentation_scope->attr);
             context->scope_span->instrumentation_scope->attr = NULL;
         }

@@ -116,7 +116,7 @@ int ctr_span_set_span_id(struct ctrace_span *span, void *buf, size_t len)
     if (!buf || len <= 0) {
         return -1;
     }
-    if (span->span_id) {
+    if (span->span_id != NULL) {
         ctr_id_destroy(span->span_id);
     }
     span->span_id = ctr_id_create(buf, len);
@@ -296,27 +296,27 @@ void ctr_span_destroy(struct ctrace_span *span)
     struct ctrace_span_status *status;
     struct ctrace_link *link;
 
-    if (span->name) {
+    if (span->name != NULL) {
         cfl_sds_destroy(span->name);
     }
 
-    if (span->trace_id) {
+    if (span->trace_id != NULL) {
         ctr_id_destroy(span->trace_id);
     }
 
-    if (span->span_id) {
+    if (span->span_id != NULL) {
         ctr_id_destroy(span->span_id);
     }
 
-    if (span->parent_span_id) {
+    if (span->parent_span_id != NULL) {
         ctr_id_destroy(span->parent_span_id);
     }
 
     /* attributes */
-    if (span->attr) {
+    if (span->attr != NULL) {
         ctr_attributes_destroy(span->attr);
     }
-    if (span->trace_state) {
+    if (span->trace_state != NULL) {
         cfl_sds_destroy(span->trace_state);
     }
 
@@ -334,7 +334,7 @@ void ctr_span_destroy(struct ctrace_span *span)
 
     /* status */
     status = &span->status;
-    if (status->message) {
+    if (status->message != NULL) {
         cfl_sds_destroy(status->message);
     }
 
