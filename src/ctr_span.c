@@ -365,7 +365,7 @@ struct ctrace_span_event *ctr_span_event_add_ts(struct ctrace_span *span, char *
         free(ev);
         return NULL;
     }
-    ev->attr = ctr_attributes_create(128);
+    ev->attr = ctr_attributes_create();
     ev->dropped_attr_count = 0;
 
     /* if no timestamp is given, use the current time */
