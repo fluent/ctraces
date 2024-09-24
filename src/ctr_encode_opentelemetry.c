@@ -917,11 +917,21 @@ static Opentelemetry__Proto__Common__V1__InstrumentationScope *set_instrumentati
         return NULL;
     }
 
-    otel_scope->name = instrumentation_scope->name;
-    otel_scope->version = instrumentation_scope->version;
+    if (instrumentation_scope->name) {
+        otel_scope->name = instrumentation_scope->name;
+    }
+    else {
+        otel_scope->name = "";
+    }
+    if (instrumentation_scope->version) {
+        otel_scope->version = instrumentation_scope->version;
+    }
+    else {
+        otel_scope->version = "";
+    }
     otel_scope->n_attributes = get_attributes_count(instrumentation_scope->attr);
     otel_scope->dropped_attributes_count = instrumentation_scope->dropped_attr_count;
-    otel_scope->attributes = set_attributes_from_ctr(instrumentation_scope->attr);;
+    otel_scope->attributes = set_attributes_from_ctr(instrumentation_scope->attr);
 
     return otel_scope;
 }
@@ -989,7 +999,9 @@ static Opentelemetry__Proto__Trace__V1__ScopeSpans **set_scope_spans(struct ctra
         }
 
         otel_scope_span->schema_url = scope_span->schema_url;
-        otel_scope_span->scope = set_instrumentation_scope(scope_span->instrumentation_scope);
+        if (scope_span->instrumentation_scope != NULL) {
+            otel_scope_span->scope = set_instrumentation_scope(scope_span->instrumentation_scope);
+        }
 
         span_count = cfl_list_size(&scope_span->spans);
         otel_scope_span->n_spans = span_count;
