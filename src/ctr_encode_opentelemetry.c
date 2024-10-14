@@ -996,9 +996,7 @@ static Opentelemetry__Proto__Trace__V1__ScopeSpans **set_scope_spans(struct ctra
             if (scope_span_index > 0) {
                 destroy_scope_spans(scope_spans, scope_span_index - 1);
             }
-
-            free(scope_spans);
-
+            /* note: scope_spans is freed inside destroy_scope_spans() */
             return NULL;
         }
 
