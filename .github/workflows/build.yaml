@@ -58,7 +58,7 @@ jobs:
         run: |
           git checkout "$BRANCH_NAME"
         shell: bash
-        working-directory: cmetrics
+        working-directory: ctraces
 
       - name: Run compilation
         run: |
