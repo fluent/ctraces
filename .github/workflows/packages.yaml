@@ -26,7 +26,7 @@ jobs:
         name: Build the ${{matrix.format}} packages
         with:
           arch: aarch64
-          distro: ubuntu20.04
+          distro: ubuntu_latest
           run: |
             apt-get update && \
             apt-get install -y --no-install-recommends \
@@ -34,7 +34,7 @@ jobs:
             cmake \
             file \
             rpm \
-            make 
+            make
             cmake .
             echo ${{ matrix.format }} | awk '{print toupper($0)}' | xargs -I{} cpack -G {}
 
@@ -69,11 +69,39 @@ jobs:
           path: |
             ./*.${{matrix.format}}
 
+  build-macos-packages-arm64:
+    name: build macOS Apple Silicon packages
+    strategy:
+      fail-fast: true
+      matrix:
+        config:
+          - format: productbuild
+            arch: apple
+            ext: pkg
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build the ${{matrix.config.format}} packages
+        run:  |
+          cmake . -DCPACK_GENERATOR=${{ matrix.config.format }}
+          echo ${{ matrix.config.format }} | xargs -I{} cpack -G {}
+
+      - name: Store the master package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.format }}-${{matrix.config.arch}}
+          path: |
+            ./*-${{matrix.config.arch}}.${{matrix.config.ext}}
+
   release:
     name: Create release and upload packages
     needs:
       - build-distro-packages-amd64
       - build-distro-packages-arm64
+      - build-macos-packages-arm64
     runs-on: ubuntu-latest
     permissions:
       contents: write
