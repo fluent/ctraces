@@ -31,6 +31,13 @@ static int convert_string_value(struct opentelemetry_decode_value *ctr_val,
 {
     int result;
 
+    /* cfl_array_append_string and cfl_variant_create_from_string call
+     * strlen() unguarded, so a NULL value would crash here.
+     */
+    if (val == NULL) {
+        return -1;
+    }
+
     result = -2;
 
     switch (value_type) {
@@ -158,12 +165,23 @@ static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
     struct opentelemetry_decode_value *ctr_arr_val;
     Opentelemetry__Proto__Common__V1__AnyValue *val;
 
+    if (otel_arr == NULL) {
+        return -1;
+    }
+    if (otel_arr->n_values > 0 && otel_arr->values == NULL) {
+        return -1;
+    }
+
     ctr_arr_val = malloc(sizeof(struct opentelemetry_decode_value));
     if (!ctr_arr_val) {
         ctr_errno();
         return -1;
     }
     ctr_arr_val->cfl_arr = cfl_array_create(otel_arr->n_values);
+    if (!ctr_arr_val->cfl_arr) {
+        free(ctr_arr_val);
+        return -1;
+    }
 
     result = 0;
 
@@ -171,6 +189,10 @@ static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
          array_index < otel_arr->n_values && result == 0;
          array_index++) {
         val = otel_arr->values[array_index];
+        if (val == NULL) {
+            /* skip malformed entry rather than failing the whole array */
+            continue;
+        }
         result = convert_any_value(ctr_arr_val, CTR_OPENTELEMETRY_TYPE_ARRAY, NULL, val);
     }
 
@@ -215,12 +237,23 @@ static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
     struct opentelemetry_decode_value *ctr_kvlist_val;
     Opentelemetry__Proto__Common__V1__KeyValue *kv;
 
+    if (otel_kvlist == NULL) {
+        return -1;
+    }
+    if (otel_kvlist->n_values > 0 && otel_kvlist->values == NULL) {
+        return -1;
+    }
+
     ctr_kvlist_val = malloc(sizeof(struct opentelemetry_decode_value));
     if (!ctr_kvlist_val) {
         ctr_errno();
         return -1;
     }
     ctr_kvlist_val->cfl_kvlist = cfl_kvlist_create();
+    if (!ctr_kvlist_val->cfl_kvlist) {
+        free(ctr_kvlist_val);
+        return -1;
+    }
 
     result = 0;
     for (kvlist_index = 0;
@@ -228,6 +261,12 @@ static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
          kvlist_index++) {
 
         kv = otel_kvlist->values[kvlist_index];
+        /* skip entries that would crash strlen() inside the cfl_kvlist
+         * inserters (which don't NULL-check the key for non-string types).
+         */
+        if (kv == NULL || kv->key == NULL || kv->value == NULL) {
+            continue;
+        }
         result = convert_any_value(ctr_kvlist_val, CTR_OPENTELEMETRY_TYPE_KVLIST, kv->key, kv->value);
     }
 
@@ -305,7 +344,12 @@ static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
     switch (val->value_case) {
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE:
-            result = convert_string_value(ctr_val, value_type, key, val->string_value);
+            if (val->string_value == NULL) {
+                result = -1;
+            }
+            else {
+                result = convert_string_value(ctr_val, value_type, key, val->string_value);
+            }
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE_STRINDEX:
@@ -334,7 +378,12 @@ static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_BYTES_VALUE:
-            result = convert_bytes_value(ctr_val, value_type, key, val->bytes_value.data, val->bytes_value.len);
+            if (val->bytes_value.len > 0 && val->bytes_value.data == NULL) {
+                result = -1;
+            }
+            else {
+                result = convert_bytes_value(ctr_val, value_type, key, val->bytes_value.data, val->bytes_value.len);
+            }
             break;
 
         default:
@@ -371,8 +420,21 @@ static struct ctrace_attributes *convert_otel_attrs(size_t n_attributes,
 
     result = 0;
 
+    if (n_attributes > 0 && otel_attr == NULL) {
+        ctr_attributes_destroy(ctr_decoded_attributes->ctr_attr);
+        free(ctr_decoded_attributes);
+        return NULL;
+    }
+
     for (index_kv = 0; index_kv < n_attributes && result == 0; index_kv++) {
         kv = otel_attr[index_kv];
+        /* Skip malformed entries that would otherwise crash strlen() inside
+         * the cfl_kvlist inserters (none of the non-string variants checks
+         * the key for NULL).
+         */
+        if (kv == NULL || kv->key == NULL || kv->value == NULL) {
+            continue;
+        }
 
         key = kv->key;
         val = kv->value;
@@ -422,8 +484,16 @@ static int span_set_events(struct ctrace_span *span,
 
     cfl_list_init(&span->events);
 
+    if (n_events > 0 && events == NULL) {
+        return -1;
+    }
+
     for (index_event = 0; index_event < n_events; index_event++) {
         event = events[index_event];
+        if (event == NULL || event->name == NULL) {
+            /* skip malformed event rather than failing the whole span */
+            continue;
+        }
 
         ctr_event = ctr_span_event_add_ts(span, event->name, event->time_unix_nano);
         if (ctr_event == NULL) {
@@ -492,8 +562,16 @@ void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
     struct ctrace_attributes *ctr_attributes;
     Opentelemetry__Proto__Trace__V1__Span__Link *link;
 
+    if (n_links > 0 && links == NULL) {
+        return;
+    }
+
     for (index_link = 0; index_link < n_links; index_link++) {
         link = links[index_link];
+        if (link == NULL) {
+            /* skip malformed link rather than dropping the rest */
+            continue;
+        }
 
         ctr_link = ctr_link_create(ctr_span,
                                    link->trace_id.data, link->trace_id.len,
@@ -545,6 +623,16 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     }
 
     ctr = ctr_create(NULL);
+    if (ctr == NULL) {
+        opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
+        return CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
+    }
+
+    if (service_request->n_resource_spans > 0 && service_request->resource_spans == NULL) {
+        opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
+        ctr_destroy(ctr);
+        return CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD;
+    }
 
     for (resource_span_index = 0; resource_span_index < service_request->n_resource_spans; resource_span_index++) {
         otel_resource_span = service_request->resource_spans[resource_span_index];
@@ -563,6 +651,12 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
         resource_set_data(resource, otel_resource_span->resource);
 
         ctr_resource_set_dropped_attr_count(resource, otel_resource_span->resource->dropped_attributes_count);
+
+        if (otel_resource_span->n_scope_spans > 0 && otel_resource_span->scope_spans == NULL) {
+            opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
+            ctr_destroy(ctr);
+            return CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD;
+        }
 
         for (scope_span_index = 0; scope_span_index < otel_resource_span->n_scope_spans; scope_span_index++) {
             otel_scope_span = otel_resource_span->scope_spans[scope_span_index];
@@ -589,10 +683,16 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                 ctr_scope_span_set_scope(scope_span, otel_scope_span->scope);
             }
 
+            if (otel_scope_span->n_spans > 0 && otel_scope_span->spans == NULL) {
+                opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
+                ctr_destroy(ctr);
+                return CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD;
+            }
+
             for (span_index = 0; span_index < otel_scope_span->n_spans; span_index++) {
                 otel_span = otel_scope_span->spans[span_index];
 
-                if (otel_span == NULL) {
+                if (otel_span == NULL || otel_span->name == NULL) {
                     opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
                     ctr_destroy(ctr);
 
