@@ -20,6 +20,8 @@
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_encode_opentelemetry.h>
 #include <ctraces/ctr_decode_opentelemetry.h>
+#include <fluent-otel-proto/fluent-otel.h>
+#include <string.h>
 #include "ctr_tests.h"
 
 /* build a non-trivial trace that exercises spans, events, links, status,
@@ -166,8 +168,189 @@ void test_otlp_decode_corrupted()
     TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_INSUFFICIENT_DATA);
 }
 
+/* minimal trace: one span, no attributes, events, links, or instrumentation
+ * scope. Exercises the encoder's empty-list paths and the decoder's
+ * "optional fields not present" paths.
+ */
+void test_otlp_minimal_trace()
+{
+    cfl_sds_t buf;
+    size_t offset = 0;
+    struct ctrace *ctx;
+    struct ctrace *decoded = NULL;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    int ret;
+
+    ctx = ctr_create(NULL);
+    TEST_ASSERT(ctx != NULL);
+
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "bare", NULL);
+    TEST_ASSERT(span != NULL);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf), &offset);
+    TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(count_spans(decoded) == 1);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(decoded);
+    ctr_destroy(ctx);
+}
+
+/* attributes carry bytes only when wrapped in an array or kvlist
+ * (convert_bytes_value rejects raw bytes at attribute top-level).
+ * This exercises ctr_variant_binary_to_otlp_any_value end-to-end.
+ */
+void test_otlp_bytes_in_array()
+{
+    cfl_sds_t buf;
+    size_t offset = 0;
+    struct ctrace *ctx;
+    struct ctrace *decoded = NULL;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    struct cfl_array *array;
+    int ret;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "bytes", NULL);
+
+    array = cfl_array_create(2);
+    cfl_array_append_bytes(array, "\xDE\xAD\xBE\xEF", 4, CFL_FALSE);
+    cfl_array_append_string(array, "tail");
+    ctr_span_set_attribute_array(span, "blob", array);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf), &offset);
+    TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(count_spans(decoded) == 1);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(decoded);
+    ctr_destroy(ctx);
+}
+
+/* multiple resource_spans, each with multiple scope_spans, each with
+ * multiple spans - exercises every encoder/decoder outer loop including
+ * the per-resource_span/per-scope_span/per-span destroy paths.
+ */
+void test_otlp_multiple_spans()
+{
+    cfl_sds_t buf;
+    size_t offset = 0;
+    struct ctrace *ctx;
+    struct ctrace *decoded = NULL;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    int r;
+    int s;
+    int n;
+    int ret;
+    char name[32];
+
+    ctx = ctr_create(NULL);
+
+    for (r = 0; r < 2; r++) {
+        rs = ctr_resource_span_create(ctx);
+        for (s = 0; s < 2; s++) {
+            ss = ctr_scope_span_create(rs);
+            for (n = 0; n < 2; n++) {
+                snprintf(name, sizeof(name), "span-%d-%d-%d", r, s, n);
+                TEST_ASSERT(ctr_span_create(ctx, ss, name, NULL) != NULL);
+            }
+        }
+    }
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf), &offset);
+    TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(count_spans(decoded) == 2 * 2 * 2);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(decoded);
+    ctr_destroy(ctx);
+}
+
+/* hand-build a protobuf payload that is well-formed wire-wise but
+ * omits the required `resource` field on the ResourceSpans message.
+ * The decoder must reject it without crashing or leaking.
+ */
+void test_otlp_decode_missing_resource()
+{
+    Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest req;
+    Opentelemetry__Proto__Trace__V1__ResourceSpans rs;
+    Opentelemetry__Proto__Trace__V1__ResourceSpans *rs_arr[1];
+    uint8_t *wire;
+    size_t wire_len;
+    size_t offset = 0;
+    struct ctrace *decoded = NULL;
+    int ret;
+
+    opentelemetry__proto__collector__trace__v1__export_trace_service_request__init(&req);
+    opentelemetry__proto__trace__v1__resource_spans__init(&rs);
+
+    /* explicitly leave rs.resource = NULL and rs.n_scope_spans = 0 */
+    rs_arr[0] = &rs;
+    req.resource_spans = rs_arr;
+    req.n_resource_spans = 1;
+
+    wire_len = opentelemetry__proto__collector__trace__v1__export_trace_service_request__get_packed_size(&req);
+    wire = malloc(wire_len);
+    TEST_ASSERT(wire != NULL);
+    opentelemetry__proto__collector__trace__v1__export_trace_service_request__pack(&req, wire);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, (char *) wire, wire_len, &offset);
+    TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD);
+
+    free(wire);
+}
+
+/* feed a valid payload truncated to half its length. Protobuf decoding
+ * must fail with CORRUPTED_DATA rather than reading past the end.
+ */
+void test_otlp_decode_truncated()
+{
+    cfl_sds_t buf;
+    size_t offset = 0;
+    struct ctrace *ctx;
+    struct ctrace *decoded = NULL;
+    int ret;
+
+    ctx = build_sample_trace();
+    TEST_ASSERT(ctx != NULL);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+    TEST_ASSERT(cfl_sds_len(buf) > 4);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf) / 2, &offset);
+    TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_CORRUPTED_DATA);
+    TEST_CHECK(decoded == NULL);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(ctx);
+}
+
 TEST_LIST = {
-    {"otlp_roundtrip",       test_otlp_roundtrip},
-    {"otlp_decode_corrupted", test_otlp_decode_corrupted},
+    {"otlp_roundtrip",            test_otlp_roundtrip},
+    {"otlp_minimal_trace",        test_otlp_minimal_trace},
+    {"otlp_bytes_in_array",       test_otlp_bytes_in_array},
+    {"otlp_multiple_spans",       test_otlp_multiple_spans},
+    {"otlp_decode_corrupted",     test_otlp_decode_corrupted},
+    {"otlp_decode_missing_resource", test_otlp_decode_missing_resource},
+    {"otlp_decode_truncated",     test_otlp_decode_truncated},
     { 0 }
 };
