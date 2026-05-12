@@ -2,6 +2,7 @@ set(UNIT_TESTS_FILES
   decoding.c
   basic.c
   span.c
+  opentelemetry.c
   )
 
 set(CTR_TESTS_DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/data")
