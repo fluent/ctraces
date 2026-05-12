@@ -164,6 +164,10 @@ static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
         return -1;
     }
     ctr_arr_val->cfl_arr = cfl_array_create(otel_arr->n_values);
+    if (!ctr_arr_val->cfl_arr) {
+        free(ctr_arr_val);
+        return -1;
+    }
 
     result = 0;
 
@@ -221,6 +225,10 @@ static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
         return -1;
     }
     ctr_kvlist_val->cfl_kvlist = cfl_kvlist_create();
+    if (!ctr_kvlist_val->cfl_kvlist) {
+        free(ctr_kvlist_val);
+        return -1;
+    }
 
     result = 0;
     for (kvlist_index = 0;
@@ -545,6 +553,10 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     }
 
     ctr = ctr_create(NULL);
+    if (ctr == NULL) {
+        opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(service_request, NULL);
+        return CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR;
+    }
 
     for (resource_span_index = 0; resource_span_index < service_request->n_resource_spans; resource_span_index++) {
         otel_resource_span = service_request->resource_spans[resource_span_index];
