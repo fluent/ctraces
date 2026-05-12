@@ -101,15 +101,17 @@ struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx)
     }
     cfl_list_init(&resource_span->scope_spans);
 
-    /* link to ctraces context */
-    cfl_list_add(&resource_span->_head, &ctx->resource_spans);
-
     /* create an empty resource */
     resource_span->resource = ctr_resource_create();
     if (!resource_span->resource) {
         free(resource_span);
         return NULL;
     }
+
+    /* link to ctraces context only after the resource has been created
+     * so we never leave a freed node attached to ctx->resource_spans.
+     */
+    cfl_list_add(&resource_span->_head, &ctx->resource_spans);
 
     return resource_span;
 }
