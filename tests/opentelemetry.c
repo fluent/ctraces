@@ -344,13 +344,195 @@ void test_otlp_decode_truncated()
     ctr_destroy(ctx);
 }
 
+/* Helpers to build a malicious payload: a service_request containing
+ * exactly one span with attributes/events/links chosen by the caller.
+ * The returned wire buffer must be freed by the caller.
+ */
+static uint8_t *pack_one_span_payload(Opentelemetry__Proto__Trace__V1__Span *span,
+                                      size_t *out_len)
+{
+    Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest req;
+    Opentelemetry__Proto__Trace__V1__ResourceSpans rs;
+    Opentelemetry__Proto__Trace__V1__ResourceSpans *rs_arr[1];
+    Opentelemetry__Proto__Trace__V1__ScopeSpans ss;
+    Opentelemetry__Proto__Trace__V1__ScopeSpans *ss_arr[1];
+    Opentelemetry__Proto__Trace__V1__Span *span_arr[1];
+    Opentelemetry__Proto__Resource__V1__Resource resource;
+    size_t len;
+    uint8_t *wire;
+
+    opentelemetry__proto__collector__trace__v1__export_trace_service_request__init(&req);
+    opentelemetry__proto__trace__v1__resource_spans__init(&rs);
+    opentelemetry__proto__resource__v1__resource__init(&resource);
+    opentelemetry__proto__trace__v1__scope_spans__init(&ss);
+
+    rs.resource = &resource;
+    ss_arr[0] = &ss;
+    rs.scope_spans = ss_arr;
+    rs.n_scope_spans = 1;
+
+    span_arr[0] = span;
+    ss.spans = span_arr;
+    ss.n_spans = 1;
+
+    rs_arr[0] = &rs;
+    req.resource_spans = rs_arr;
+    req.n_resource_spans = 1;
+
+    len = opentelemetry__proto__collector__trace__v1__export_trace_service_request__get_packed_size(&req);
+    wire = malloc(len);
+    if (wire) {
+        opentelemetry__proto__collector__trace__v1__export_trace_service_request__pack(&req, wire);
+    }
+    *out_len = len;
+    return wire;
+}
+
+/* A KeyValue with no `value` field set unpacks to value=NULL. The decoder
+ * must skip the entry instead of dereferencing it.
+ */
+void test_otlp_decode_attribute_null_value()
+{
+    Opentelemetry__Proto__Common__V1__KeyValue kv;
+    Opentelemetry__Proto__Common__V1__KeyValue *kv_arr[1];
+    Opentelemetry__Proto__Trace__V1__Span span;
+    uint8_t *wire;
+    size_t wire_len;
+    size_t offset = 0;
+    struct ctrace *decoded = NULL;
+    int ret;
+
+    opentelemetry__proto__trace__v1__span__init(&span);
+    opentelemetry__proto__common__v1__key_value__init(&kv);
+    kv.key = "bad-key";
+    /* leave kv.value = NULL */
+
+    kv_arr[0] = &kv;
+    span.name = "victim";
+    span.attributes = kv_arr;
+    span.n_attributes = 1;
+
+    wire = pack_one_span_payload(&span, &wire_len);
+    TEST_ASSERT(wire != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, (char *) wire, wire_len, &offset);
+    TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(decoded != NULL);
+    if (decoded != NULL) {
+        TEST_CHECK(count_spans(decoded) == 1);
+        ctr_destroy(decoded);
+    }
+    free(wire);
+}
+
+/* A nested AnyValue with VALUE_INT_VALUE but key=NULL would, before the
+ * hardening, call strlen(NULL) inside cfl_kvlist_insert_int64. Build a
+ * kvlist attribute containing an int entry with empty key (the closest
+ * we can encode via protobuf-c, which forbids NULL on wire) plus a
+ * KeyValue whose value field is absent - both must be handled safely.
+ */
+void test_otlp_decode_nested_malformed_kv()
+{
+    Opentelemetry__Proto__Common__V1__AnyValue any_int;
+    Opentelemetry__Proto__Common__V1__KeyValue inner_good;
+    Opentelemetry__Proto__Common__V1__KeyValue inner_bad;
+    Opentelemetry__Proto__Common__V1__KeyValue *inner_arr[2];
+    Opentelemetry__Proto__Common__V1__KeyValueList kvlist;
+    Opentelemetry__Proto__Common__V1__AnyValue any_kv;
+    Opentelemetry__Proto__Common__V1__KeyValue outer;
+    Opentelemetry__Proto__Common__V1__KeyValue *outer_arr[1];
+    Opentelemetry__Proto__Trace__V1__Span span;
+    uint8_t *wire;
+    size_t wire_len;
+    size_t offset = 0;
+    struct ctrace *decoded = NULL;
+    int ret;
+
+    opentelemetry__proto__trace__v1__span__init(&span);
+
+    opentelemetry__proto__common__v1__any_value__init(&any_int);
+    any_int.value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE;
+    any_int.int_value = 42;
+
+    opentelemetry__proto__common__v1__key_value__init(&inner_good);
+    inner_good.key = "k";
+    inner_good.value = &any_int;
+
+    opentelemetry__proto__common__v1__key_value__init(&inner_bad);
+    inner_bad.key = "missing-value";
+    /* leave inner_bad.value = NULL */
+
+    inner_arr[0] = &inner_good;
+    inner_arr[1] = &inner_bad;
+
+    opentelemetry__proto__common__v1__key_value_list__init(&kvlist);
+    kvlist.values = inner_arr;
+    kvlist.n_values = 2;
+
+    opentelemetry__proto__common__v1__any_value__init(&any_kv);
+    any_kv.value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_KVLIST_VALUE;
+    any_kv.kvlist_value = &kvlist;
+
+    opentelemetry__proto__common__v1__key_value__init(&outer);
+    outer.key = "nested";
+    outer.value = &any_kv;
+    outer_arr[0] = &outer;
+
+    span.name = "victim";
+    span.attributes = outer_arr;
+    span.n_attributes = 1;
+
+    wire = pack_one_span_payload(&span, &wire_len);
+    TEST_ASSERT(wire != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, (char *) wire, wire_len, &offset);
+    TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(decoded != NULL);
+    if (decoded != NULL) {
+        ctr_destroy(decoded);
+    }
+    free(wire);
+}
+
+/* A span whose `name` field is absent on the wire unpacks with an
+ * empty-string name (protobuf-c default). The decoder must accept it
+ * gracefully, not crash on the empty key.
+ */
+void test_otlp_decode_span_empty_name()
+{
+    Opentelemetry__Proto__Trace__V1__Span span;
+    uint8_t *wire;
+    size_t wire_len;
+    size_t offset = 0;
+    struct ctrace *decoded = NULL;
+    int ret;
+
+    opentelemetry__proto__trace__v1__span__init(&span);
+    /* span.name defaults to the empty-string sentinel */
+
+    wire = pack_one_span_payload(&span, &wire_len);
+    TEST_ASSERT(wire != NULL);
+
+    ret = ctr_decode_opentelemetry_create(&decoded, (char *) wire, wire_len, &offset);
+    TEST_CHECK(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    if (decoded != NULL) {
+        TEST_CHECK(count_spans(decoded) == 1);
+        ctr_destroy(decoded);
+    }
+
+    free(wire);
+}
+
 TEST_LIST = {
-    {"otlp_roundtrip",            test_otlp_roundtrip},
-    {"otlp_minimal_trace",        test_otlp_minimal_trace},
-    {"otlp_bytes_in_array",       test_otlp_bytes_in_array},
-    {"otlp_multiple_spans",       test_otlp_multiple_spans},
-    {"otlp_decode_corrupted",     test_otlp_decode_corrupted},
-    {"otlp_decode_missing_resource", test_otlp_decode_missing_resource},
-    {"otlp_decode_truncated",     test_otlp_decode_truncated},
+    {"otlp_roundtrip",                  test_otlp_roundtrip},
+    {"otlp_minimal_trace",              test_otlp_minimal_trace},
+    {"otlp_bytes_in_array",             test_otlp_bytes_in_array},
+    {"otlp_multiple_spans",             test_otlp_multiple_spans},
+    {"otlp_decode_corrupted",           test_otlp_decode_corrupted},
+    {"otlp_decode_missing_resource",    test_otlp_decode_missing_resource},
+    {"otlp_decode_truncated",           test_otlp_decode_truncated},
+    {"otlp_decode_attribute_null_value", test_otlp_decode_attribute_null_value},
+    {"otlp_decode_nested_malformed_kv",  test_otlp_decode_nested_malformed_kv},
+    {"otlp_decode_span_empty_name",      test_otlp_decode_span_empty_name},
     { 0 }
 };
