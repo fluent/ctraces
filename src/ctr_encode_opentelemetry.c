@@ -485,8 +485,7 @@ static inline Opentelemetry__Proto__Common__V1__AnyValue *ctr_variant_binary_to_
 
         if (result->bytes_value.data == NULL) {
             otlp_any_value_destroy(result);
-            result = NULL;
-
+            return NULL;
         }
 
         memcpy(result->bytes_value.data, value->data.as_bytes, result->bytes_value.len);
@@ -686,6 +685,10 @@ static Opentelemetry__Proto__Trace__V1__Span__Event *set_event(struct ctrace_spa
     Opentelemetry__Proto__Trace__V1__Span__Event *event;
 
     event = calloc(1, sizeof(Opentelemetry__Proto__Trace__V1__Span__Event));
+    if (!event) {
+        ctr_errno();
+        return NULL;
+    }
     opentelemetry__proto__trace__v1__span__event__init(event);
 
     event->time_unix_nano = ctr_event->time_unix_nano;
@@ -709,6 +712,10 @@ static Opentelemetry__Proto__Trace__V1__Span__Event **set_events_from_ctr(struct
     Opentelemetry__Proto__Trace__V1__Span__Event **event_arr;
 
     event_arr = calloc(count, sizeof(Opentelemetry__Proto__Trace__V1__Span__Event *));
+    if (!event_arr) {
+        ctr_errno();
+        return NULL;
+    }
 
     event_index = 0;
     cfl_list_foreach(head, events) {
@@ -750,6 +757,10 @@ static void otel_span_set_status(Opentelemetry__Proto__Trace__V1__Span *otel_spa
     Opentelemetry__Proto__Trace__V1__Status *otel_status;
 
     otel_status = calloc(1, sizeof(Opentelemetry__Proto__Trace__V1__Status));
+    if (!otel_status) {
+        ctr_errno();
+        return;
+    }
     opentelemetry__proto__trace__v1__status__init(otel_status);
 
     otel_status->code = status.code;
@@ -776,6 +787,10 @@ static void otel_span_set_links(Opentelemetry__Proto__Trace__V1__Span *otel_span
     Opentelemetry__Proto__Trace__V1__Span__Link *otel_link;
 
     otel_links = calloc(count, sizeof(Opentelemetry__Proto__Trace__V1__Span__Link *));
+    if (!otel_links) {
+        ctr_errno();
+        return;
+    }
 
     link_index = 0;
 
@@ -783,6 +798,10 @@ static void otel_span_set_links(Opentelemetry__Proto__Trace__V1__Span *otel_span
         link = cfl_list_entry(head, struct ctrace_link, _head);
 
         otel_link = calloc(1, sizeof(Opentelemetry__Proto__Trace__V1__Span__Link));
+        if (!otel_link) {
+            ctr_errno();
+            break;
+        }
         opentelemetry__proto__trace__v1__span__link__init(otel_link);
 
         if (link->trace_id) {
@@ -810,7 +829,7 @@ static void otel_span_set_links(Opentelemetry__Proto__Trace__V1__Span *otel_span
         otel_links[link_index++] = otel_link;
     }
 
-    otel_span->n_links = count;
+    otel_span->n_links = link_index;
     otel_span->links = otel_links;
 }
 
@@ -1057,6 +1076,9 @@ static Opentelemetry__Proto__Trace__V1__ResourceSpans **set_resource_spans(struc
 
     resource_span_count = cfl_list_size(&ctr->resource_spans);
     rs = initialize_resource_spans(resource_span_count);
+    if (!rs) {
+        return NULL;
+    }
 
     resource_span_index = 0;
 
@@ -1106,8 +1128,12 @@ static Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest *cr
         return NULL;
     }
 
-    req->n_resource_spans = cfl_list_size(&ctr->resource_spans);
     rs = set_resource_spans(ctr);
+    if (!rs) {
+        free(req);
+        return NULL;
+    }
+    req->n_resource_spans = cfl_list_size(&ctr->resource_spans);
     req->resource_spans = rs;
 
     return req;
@@ -1155,9 +1181,15 @@ static void destroy_events(Opentelemetry__Proto__Trace__V1__Span__Event **events
     int event_index;
     Opentelemetry__Proto__Trace__V1__Span__Event *event;
 
+    if (events == NULL) {
+        return;
+    }
+
     for (event_index = 0; event_index < count; event_index++) {
         event = events[event_index];
-        destroy_event(event);
+        if (event != NULL) {
+            destroy_event(event);
+        }
     }
 
     free(events);
@@ -1184,9 +1216,15 @@ static void destroy_links(Opentelemetry__Proto__Trace__V1__Span__Link **links, s
     int link_index;
     Opentelemetry__Proto__Trace__V1__Span__Link *link;
 
+    if (links == NULL) {
+        return;
+    }
+
     for (link_index = 0; link_index < count; link_index++) {
         link = links[link_index];
-        destroy_link(link);
+        if (link != NULL) {
+            destroy_link(link);
+        }
     }
 
     free(links);
@@ -1221,9 +1259,11 @@ static void destroy_span(Opentelemetry__Proto__Trace__V1__Span *span)
     span->name = NULL;
     span->kind = 0;
 
-    span->status->message = NULL;
-    span->status->code = 0;
-    free(span->status);
+    if (span->status) {
+        span->status->message = NULL;
+        span->status->code = 0;
+        free(span->status);
+    }
 
     free(span);
 }
@@ -1325,6 +1365,9 @@ cfl_sds_t ctr_encode_opentelemetry_create(struct ctrace *ctr)
     Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest *req;
 
     req = create_export_service_request(ctr);
+    if (!req) {
+        return NULL;
+    }
 
     len = opentelemetry__proto__collector__trace__v1__export_trace_service_request__get_packed_size(req);
     buf = cfl_sds_create_size(len);
