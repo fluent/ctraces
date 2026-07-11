@@ -23,6 +23,10 @@ struct ctrace_scope_span *ctr_scope_span_create(struct ctrace_resource_span *res
 {
     struct ctrace_scope_span *scope_span;
 
+    if (resource_span == NULL) {
+        return NULL;
+    }
+
     scope_span = calloc(1, sizeof(struct ctrace_scope_span));
     if (!scope_span) {
         ctr_errno();
@@ -63,14 +67,21 @@ void ctr_scope_span_destroy(struct ctrace_scope_span *scope_span)
 /* Set the schema_url for a resource_span */
 int ctr_scope_span_set_schema_url(struct ctrace_scope_span *scope_span, char *url)
 {
+    cfl_sds_t new_url;
+
+    if (scope_span == NULL || url == NULL) {
+        return -1;
+    }
+
+    new_url = cfl_sds_create(url);
+    if (new_url == NULL) {
+        return -1;
+    }
+
     if (scope_span->schema_url) {
         cfl_sds_destroy(scope_span->schema_url);
     }
-
-    scope_span->schema_url = cfl_sds_create(url);
-    if (!scope_span->schema_url) {
-        return -1;
-    }
+    scope_span->schema_url = new_url;
 
     return 0;
 }
@@ -100,9 +111,18 @@ struct ctrace_instrumentation_scope *ctr_instrumentation_scope_create(char *name
 
     if (name) {
         ins_scope->name = cfl_sds_create(name);
+        if (ins_scope->name == NULL) {
+            free(ins_scope);
+            return NULL;
+        }
     }
     if (version) {
         ins_scope->version = cfl_sds_create(version);
+        if (ins_scope->version == NULL) {
+            cfl_sds_destroy(ins_scope->name);
+            free(ins_scope);
+            return NULL;
+        }
     }
 
     ins_scope->dropped_attr_count = dropped_attr_count;
@@ -127,4 +147,3 @@ void ctr_instrumentation_scope_destroy(struct ctrace_instrumentation_scope *ins_
 
     free(ins_scope);
 }
-

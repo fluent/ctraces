@@ -86,7 +86,43 @@ void test_span()
     ctr_destroy(ctx);
 }
 
+void test_resource_span_direct_destroy()
+{
+    struct ctrace *ctx;
+    struct ctrace_resource_span *resource_span;
+
+    ctx = ctr_create(NULL);
+    TEST_CHECK(ctx != NULL);
+
+    resource_span = ctr_resource_span_create(ctx);
+    TEST_CHECK(resource_span != NULL);
+
+    ctr_resource_span_destroy(resource_span);
+    TEST_CHECK(cfl_list_is_empty(&ctx->resource_spans));
+
+    /* Preserve compatibility with Fluent Bit's historical manual unlink. */
+    resource_span = ctr_resource_span_create(ctx);
+    TEST_CHECK(resource_span != NULL);
+    cfl_list_del(&resource_span->_head);
+    ctr_resource_span_destroy(resource_span);
+
+    /* Must not traverse the resource span that was already destroyed. */
+    ctr_destroy(ctx);
+}
+
+void test_random_id_length()
+{
+    struct ctrace_id *id;
+
+    id = ctr_id_create_random(CTR_ID_OTEL_TRACE_SIZE);
+    TEST_CHECK(id != NULL);
+    TEST_CHECK(ctr_id_get_len(id) == CTR_ID_OTEL_TRACE_SIZE);
+    ctr_id_destroy(id);
+}
+
 TEST_LIST = {
     {"span", test_span},
+    {"resource_span_direct_destroy", test_resource_span_direct_destroy},
+    {"random_id_length", test_random_id_length},
     { 0 }
 };
