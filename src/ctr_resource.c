@@ -59,15 +59,16 @@ struct ctrace_resource *ctr_resource_create_default()
 
 int ctr_resource_set_attributes(struct ctrace_resource *res, struct ctrace_attributes *attr)
 {
-    if (!attr) {
+    if (!res || !attr) {
         return -1;
     }
 
-    if (res->attr) {
-        ctr_attributes_destroy(res->attr);
+    if (res->attr != attr) {
+        if (res->attr != NULL) {
+            ctr_attributes_destroy(res->attr);
+        }
+        res->attr = attr;
     }
-
-    res->attr = attr;
     return 0;
 }
 
@@ -93,6 +94,10 @@ void ctr_resource_destroy(struct ctrace_resource *res)
 struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx)
 {
     struct ctrace_resource_span *resource_span;
+
+    if (ctx == NULL) {
+        return NULL;
+    }
 
     resource_span = calloc(1, sizeof(struct ctrace_resource_span));
     if (!resource_span) {
@@ -124,14 +129,21 @@ struct ctrace_resource *ctr_resource_span_get_resource(struct ctrace_resource_sp
 /* Set the schema_url for a resource_span */
 int ctr_resource_span_set_schema_url(struct ctrace_resource_span *resource_span, char *url)
 {
-    if (resource_span->schema_url) {
-        cfl_sds_destroy(resource_span->schema_url);
-    }
+    cfl_sds_t new_url;
 
-    resource_span->schema_url = cfl_sds_create(url);
-    if (!resource_span->schema_url) {
+    if (resource_span == NULL || url == NULL) {
         return -1;
     }
+
+    new_url = cfl_sds_create(url);
+    if (new_url == NULL) {
+        return -1;
+    }
+
+    if (resource_span->schema_url != NULL) {
+        cfl_sds_destroy(resource_span->schema_url);
+    }
+    resource_span->schema_url = new_url;
 
     return 0;
 }
@@ -141,6 +153,15 @@ void ctr_resource_span_destroy(struct ctrace_resource_span *resource_span)
     struct cfl_list *tmp;
     struct cfl_list *head;
     struct ctrace_scope_span *scope_span;
+
+    if (resource_span == NULL) {
+        return;
+    }
+
+    /* Fluent Bit historically unlinked resource spans before destroying them. */
+    if (resource_span->_head.prev != NULL && resource_span->_head.next != NULL) {
+        cfl_list_del(&resource_span->_head);
+    }
 
     /* release resource if set */
     if (resource_span->resource) {

@@ -115,7 +115,7 @@ check_c_source_compiles("
   #include <sys/random.h>
   int main() {
       unsigned int tmp;
-      getrandom(tmp, sizeof(tmp), GRND_NONBLOCK);
+      getrandom(&tmp, sizeof(tmp), GRND_NONBLOCK);
       return 0;
   }" CTR_HAVE_GETRANDOM)
 if(CTR_HAVE_GETRANDOM)
