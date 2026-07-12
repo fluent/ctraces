@@ -53,6 +53,14 @@ static void format_int64(cfl_sds_t *buf, int64_t val, int level)
     sds_cat_safe(buf, tmp);
 }
 
+static void format_uint64(cfl_sds_t *buf, uint64_t val, int level)
+{
+    char tmp[1024];
+
+    snprintf(tmp, sizeof(tmp) - 1, "%" PRIu64, val);
+    sds_cat_safe(buf, tmp);
+}
+
 static void format_double(cfl_sds_t *buf, double val, int level)
 {
     char tmp[1024];
@@ -95,6 +103,12 @@ static void format_array(cfl_sds_t *buf, struct cfl_array *array, int level)
         }
         else if (v->type == CFL_VARIANT_INT) {
             format_int64(buf, v->data.as_int64, off);
+        }
+        else if (v->type == CFL_VARIANT_UINT) {
+            format_uint64(buf, v->data.as_uint64, off);
+        }
+        else if (v->type == CFL_VARIANT_NULL) {
+            sds_cat_safe(buf, "null");
         }
         else if (v->type == CFL_VARIANT_DOUBLE) {
             format_double(buf, v->data.as_double, off);
@@ -140,6 +154,12 @@ static void format_attributes(cfl_sds_t *buf, struct cfl_kvlist *kv, int level)
         }
         else if (v->type == CFL_VARIANT_INT) {
             format_int64(buf, v->data.as_int64, off);
+        }
+        else if (v->type == CFL_VARIANT_UINT) {
+            format_uint64(buf, v->data.as_uint64, off);
+        }
+        else if (v->type == CFL_VARIANT_NULL) {
+            sds_cat_safe(buf, "null");
         }
         else if (v->type == CFL_VARIANT_DOUBLE) {
             format_double(buf, v->data.as_double, off);
