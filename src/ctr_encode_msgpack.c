@@ -42,6 +42,11 @@ static void pack_int64(mpack_writer_t *writer, int64_t val)
     mpack_write_i64(writer, val);
 }
 
+static void pack_uint64(mpack_writer_t *writer, uint64_t val)
+{
+    mpack_write_u64(writer, val);
+}
+
 static void pack_double(mpack_writer_t *writer, double val)
 {
     mpack_write_double(writer, val);
@@ -109,6 +114,9 @@ static void pack_variant(mpack_writer_t *writer, struct cfl_variant *variant)
     else if (type == CFL_VARIANT_INT) {
         pack_int64(writer, variant->data.as_int64);
     }
+    else if (type == CFL_VARIANT_UINT) {
+        pack_uint64(writer, variant->data.as_uint64);
+    }
     else if (type == CFL_VARIANT_DOUBLE) {
         pack_double(writer, variant->data.as_double);
     }
@@ -121,8 +129,14 @@ static void pack_variant(mpack_writer_t *writer, struct cfl_variant *variant)
     else if (type == CFL_VARIANT_BYTES) {
         pack_bytes(writer, variant->data.as_bytes);
     }
+    else if (type == CFL_VARIANT_NULL) {
+        mpack_write_nil(writer);
+    }
     else if (type == CFL_VARIANT_REFERENCE) {
-        /* unsupported */
+        mpack_writer_flag_error(writer, mpack_error_invalid);
+    }
+    else {
+        mpack_writer_flag_error(writer, mpack_error_invalid);
     }
 }
 
@@ -485,9 +499,12 @@ int ctr_encode_msgpack_create(struct ctrace *ctx,  char **out_buf, size_t *out_s
     struct ctrace_resource_span *resource_span;
     struct ctrace_resource *resource;
 
-    if (ctx == NULL) {
+    if (ctx == NULL || out_buf == NULL || out_size == NULL) {
         return -1;
     }
+
+    *out_buf = NULL;
+    *out_size = 0;
 
     mpack_writer_init_growable(&writer, &data, &size);
 
