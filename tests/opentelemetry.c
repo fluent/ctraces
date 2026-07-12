@@ -222,6 +222,74 @@ void test_otlp_minimal_trace()
     ctr_destroy(ctx);
 }
 
+void test_otlp_empty_context()
+{
+    cfl_sds_t buf;
+    size_t offset;
+    struct ctrace *ctx;
+    struct ctrace *decoded;
+    int ret;
+
+    ctx = ctr_create(NULL);
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+
+    offset = 0;
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf), &offset);
+    TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(cfl_list_is_empty(&decoded->resource_spans));
+
+    ctr_destroy(decoded);
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(ctx);
+}
+
+void test_otlp_empty_bytes_attribute()
+{
+    cfl_sds_t buf;
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "empty-bytes", NULL);
+    TEST_ASSERT(cfl_kvlist_insert_bytes(span->attr->kv, "empty", "", 0,
+                                        CFL_FALSE) == 0);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_CHECK(buf != NULL);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(ctx);
+}
+
+void test_otlp_rejects_invalid_variant()
+{
+    cfl_sds_t buf;
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    struct cfl_variant *value;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "invalid", NULL);
+    value = cfl_variant_create();
+    TEST_ASSERT(value != NULL);
+    value->type = 999;
+    TEST_ASSERT(cfl_kvlist_insert(span->attr->kv, "invalid", value) == 0);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_CHECK(buf == NULL);
+
+    ctr_destroy(ctx);
+}
+
 /* attributes carry bytes only when wrapped in an array or kvlist
  * (convert_bytes_value rejects raw bytes at attribute top-level).
  * This exercises ctr_variant_binary_to_otlp_any_value end-to-end.
@@ -585,6 +653,9 @@ void test_otlp_decode_span_empty_name()
 TEST_LIST = {
     {"otlp_roundtrip",                  test_otlp_roundtrip},
     {"otlp_minimal_trace",              test_otlp_minimal_trace},
+    {"otlp_empty_context",              test_otlp_empty_context},
+    {"otlp_empty_bytes_attribute",      test_otlp_empty_bytes_attribute},
+    {"otlp_rejects_invalid_variant",     test_otlp_rejects_invalid_variant},
     {"otlp_bytes_in_array",             test_otlp_bytes_in_array},
     {"otlp_bytes_attribute",            test_otlp_bytes_attribute},
     {"otlp_multiple_spans",             test_otlp_multiple_spans},
