@@ -677,6 +677,8 @@ void test_msgpack_long_attribute_key()
     struct ctrace_resource_span *rs;
     struct ctrace_scope_span *ss;
     struct ctrace_span *span;
+    struct cfl_variant *null_value;
+    struct cfl_variant *value;
     int result;
 
     memset(key, 'k', sizeof(key) - 1);
@@ -687,6 +689,10 @@ void test_msgpack_long_attribute_key()
     ss = ctr_scope_span_create(rs);
     span = ctr_span_create(ctx, ss, "long-key", NULL);
     TEST_ASSERT(ctr_span_set_attribute_string(span, key, "value") == 0);
+    TEST_ASSERT(cfl_kvlist_insert_uint64(span->attr->kv, "uint", UINT64_MAX) == 0);
+    null_value = cfl_variant_create_from_null();
+    TEST_ASSERT(null_value != NULL);
+    TEST_ASSERT(cfl_kvlist_insert(span->attr->kv, "null", null_value) == 0);
     TEST_ASSERT(ctr_encode_msgpack_create(ctx, &buffer, &size) == 0);
 
     offset = 0;
@@ -697,6 +703,13 @@ void test_msgpack_long_attribute_key()
     ss = cfl_list_entry(rs->scope_spans.next, struct ctrace_scope_span, _head);
     span = cfl_list_entry(ss->spans.next, struct ctrace_span, _head);
     TEST_CHECK(cfl_kvlist_fetch(span->attr->kv, key) != NULL);
+    value = cfl_kvlist_fetch(span->attr->kv, "uint");
+    TEST_ASSERT(value != NULL);
+    TEST_CHECK(value->type == CFL_VARIANT_UINT);
+    TEST_CHECK(value->data.as_uint64 == UINT64_MAX);
+    value = cfl_kvlist_fetch(span->attr->kv, "null");
+    TEST_ASSERT(value != NULL);
+    TEST_CHECK(value->type == CFL_VARIANT_NULL);
 
     ctr_destroy(decoded);
     ctr_encode_msgpack_destroy(buffer);
@@ -739,8 +752,66 @@ void test_msgpack_variant_limits()
 
     mpack_reader_init_data(&reader, buffer, size);
     result = unpack_cfl_kvlist(&reader, &kvlist);
-    TEST_CHECK(result != 0);
+    TEST_ASSERT(result == 0);
+    variant = cfl_kvlist_fetch(kvlist, "overflow");
+    TEST_ASSERT(variant != NULL);
+    TEST_CHECK(variant->type == CFL_VARIANT_UINT);
+    TEST_CHECK(variant->data.as_uint64 == UINT64_MAX);
+    cfl_kvlist_destroy(kvlist);
     mpack_reader_destroy(&reader);
+    free(buffer);
+}
+
+void test_msgpack_rejects_reference()
+{
+    char *buffer;
+    size_t size;
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "reference", NULL);
+    TEST_ASSERT(cfl_kvlist_insert_reference(span->attr->kv, "opaque", span) == 0);
+
+    buffer = (char *) 0x1;
+    size = 123;
+    TEST_CHECK(ctr_encode_msgpack_create(ctx, &buffer, &size) != 0);
+    TEST_CHECK(buffer == NULL);
+    TEST_CHECK(size == 0);
+
+    ctr_destroy(ctx);
+}
+
+void test_msgpack_rejects_duplicate_fields()
+{
+    char *buffer;
+    size_t size;
+    size_t offset;
+    mpack_writer_t writer;
+    struct ctrace *decoded;
+    int result;
+
+    mpack_writer_init_growable(&writer, &buffer, &size);
+    mpack_start_map(&writer, 2);
+    mpack_write_cstr(&writer, "resourceSpans");
+    mpack_start_array(&writer, 0);
+    mpack_finish_array(&writer);
+    mpack_write_cstr(&writer, "resourceSpans");
+    mpack_start_array(&writer, 0);
+    mpack_finish_array(&writer);
+    mpack_finish_map(&writer);
+    TEST_ASSERT(mpack_writer_destroy(&writer) == mpack_ok);
+
+    offset = 0;
+    decoded = NULL;
+    result = ctr_decode_msgpack_create(&decoded, buffer, size, &offset);
+    TEST_CHECK(result == CTR_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    TEST_CHECK(decoded == NULL);
+
     free(buffer);
 }
 
@@ -907,5 +978,7 @@ TEST_LIST = {
     {"msgpack_integer_ranges",          test_msgpack_integer_ranges},
     {"msgpack_long_attribute_key",      test_msgpack_long_attribute_key},
     {"msgpack_variant_limits",          test_msgpack_variant_limits},
+    {"msgpack_rejects_reference",       test_msgpack_rejects_reference},
+    {"msgpack_rejects_duplicate_fields", test_msgpack_rejects_duplicate_fields},
     { 0 }
 };

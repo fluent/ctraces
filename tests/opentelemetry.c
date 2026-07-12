@@ -290,6 +290,26 @@ void test_otlp_rejects_invalid_variant()
     ctr_destroy(ctx);
 }
 
+void test_otlp_rejects_opaque_reference()
+{
+    cfl_sds_t buf;
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "reference", NULL);
+    TEST_ASSERT(cfl_kvlist_insert_reference(span->attr->kv, "opaque", span) == 0);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_CHECK(buf == NULL);
+
+    ctr_destroy(ctx);
+}
+
 /* attributes carry bytes only when wrapped in an array or kvlist
  * (convert_bytes_value rejects raw bytes at attribute top-level).
  * This exercises ctr_variant_binary_to_otlp_any_value end-to-end.
@@ -656,6 +676,7 @@ TEST_LIST = {
     {"otlp_empty_context",              test_otlp_empty_context},
     {"otlp_empty_bytes_attribute",      test_otlp_empty_bytes_attribute},
     {"otlp_rejects_invalid_variant",     test_otlp_rejects_invalid_variant},
+    {"otlp_rejects_opaque_reference",    test_otlp_rejects_opaque_reference},
     {"otlp_bytes_in_array",             test_otlp_bytes_in_array},
     {"otlp_bytes_attribute",            test_otlp_bytes_attribute},
     {"otlp_multiple_spans",             test_otlp_multiple_spans},
