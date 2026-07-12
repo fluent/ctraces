@@ -576,6 +576,53 @@ void test_msgpack_to_ctr_with_empty_spans()
     ctr_destroy(context);
 }
 
+void test_msgpack_preserves_flags()
+{
+    char *buffer;
+    size_t size;
+    size_t offset;
+    struct ctrace *ctx;
+    struct ctrace *decoded;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    struct ctrace_link *link;
+    int result;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "flags", NULL);
+    link = ctr_link_create(span, NULL, 0, NULL, 0);
+    TEST_ASSERT(link != NULL);
+
+    ctr_span_set_flags(span, 0x301);
+    ctr_span_set_dropped_links_count(span, 17);
+    ctr_link_set_flags(link, 0x201);
+
+    result = ctr_encode_msgpack_create(ctx, &buffer, &size);
+    TEST_ASSERT(result == 0);
+
+    offset = 0;
+    result = ctr_decode_msgpack_create(&decoded, buffer, size, &offset);
+    TEST_ASSERT(result == 0);
+    TEST_ASSERT(decoded != NULL);
+
+    rs = cfl_list_entry(decoded->resource_spans.next,
+                        struct ctrace_resource_span, _head);
+    ss = cfl_list_entry(rs->scope_spans.next, struct ctrace_scope_span, _head);
+    span = cfl_list_entry(ss->spans.next, struct ctrace_span, _head);
+    link = cfl_list_entry(span->links.next, struct ctrace_link, _head);
+
+    TEST_CHECK(span->flags == 0x301);
+    TEST_CHECK(span->dropped_links_count == 17);
+    TEST_CHECK(link->flags == 0x201);
+
+    ctr_destroy(decoded);
+    ctr_encode_msgpack_destroy(buffer);
+    ctr_destroy(ctx);
+}
+
 void test_simple_to_msgpack_and_back()
 {
     struct ctrace *ctx;
@@ -734,5 +781,6 @@ TEST_LIST = {
     {"cmt_simple_to_msgpack_and_back", test_simple_to_msgpack_and_back},
     {"cmt_msgpack",                    test_msgpack_to_cmt},
     {"empty_spans",                    test_msgpack_to_ctr_with_empty_spans},
+    {"msgpack_preserves_flags",         test_msgpack_preserves_flags},
     { 0 }
 };

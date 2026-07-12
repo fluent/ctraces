@@ -266,7 +266,7 @@ static void pack_links(mpack_writer_t *writer, struct cfl_list *links)
         link = cfl_list_entry(head, struct ctrace_link, _head);
 
         /* start map */
-        mpack_start_map(writer, 5);
+        mpack_start_map(writer, 6);
 
         /* trace_id */
         mpack_write_cstr(writer, "trace_id");
@@ -298,6 +298,10 @@ static void pack_links(mpack_writer_t *writer, struct cfl_list *links)
         mpack_write_cstr(writer, "dropped_attributes_count");
         mpack_write_u32(writer, link->dropped_attr_count);
 
+        /* flags */
+        mpack_write_cstr(writer, "flags");
+        mpack_write_u32(writer, link->flags);
+
         /* end map */
         mpack_finish_map(writer);
     }
@@ -307,7 +311,7 @@ static void pack_links(mpack_writer_t *writer, struct cfl_list *links)
 
 static void pack_span(mpack_writer_t *writer, struct ctrace_span *span)
 {
-    mpack_start_map(writer, 16);
+    mpack_start_map(writer, 17);
 
     /* trace_id */
     mpack_write_cstr(writer, "trace_id");
@@ -329,6 +333,10 @@ static void pack_span(mpack_writer_t *writer, struct ctrace_span *span)
     else {
         mpack_write_nil(writer);
     }
+
+    /* flags */
+    mpack_write_cstr(writer, "flags");
+    mpack_write_u32(writer, span->flags);
 
     /* name */
     mpack_write_cstr(writer, "name");

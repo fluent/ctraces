@@ -68,6 +68,8 @@ static struct ctrace *build_sample_trace()
     ctr_span_set_trace_id_with_cid(span_root, trace_id);
     ctr_span_set_span_id_with_cid(span_root, span_id);
     ctr_span_set_status(span_root, CTRACE_SPAN_STATUS_CODE_OK, "all good");
+    ctr_span_set_flags(span_root, 0x301);
+    ctr_span_set_dropped_links_count(span_root, 11);
 
     ctr_span_set_attribute_string(span_root, "service.name", "ctraces");
     ctr_span_set_attribute_int64(span_root, "year", 2026);
@@ -95,6 +97,7 @@ static struct ctrace *build_sample_trace()
     link = ctr_link_create_with_cid(span_child, trace_id, span_id);
     ctr_link_set_trace_state(link, "state=1");
     ctr_link_set_dropped_attr_count(link, 2);
+    ctr_link_set_flags(link, 0x201);
 
     ctr_id_destroy(trace_id);
     ctr_id_destroy(span_id);
@@ -131,6 +134,10 @@ void test_otlp_roundtrip()
     struct ctrace *ctx;
     struct ctrace *decoded;
     int ret;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    struct ctrace_link *link;
 
     ctx = build_sample_trace();
     TEST_ASSERT(ctx != NULL);
@@ -143,6 +150,18 @@ void test_otlp_roundtrip()
     TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
     TEST_ASSERT(decoded != NULL);
     TEST_CHECK(count_spans(decoded) == 2);
+
+    rs = cfl_list_entry(decoded->resource_spans.next,
+                        struct ctrace_resource_span, _head);
+    ss = cfl_list_entry(rs->scope_spans.next, struct ctrace_scope_span, _head);
+    span = cfl_list_entry(ss->spans.next, struct ctrace_span, _head);
+    TEST_CHECK(span->flags == 0x301);
+    TEST_CHECK(span->dropped_links_count == 11);
+
+    span = cfl_list_entry(span->_head.next, struct ctrace_span, _head);
+    link = cfl_list_entry(span->links.next, struct ctrace_link, _head);
+    TEST_CHECK(link->flags == 0x201);
+    TEST_CHECK(strcmp(link->trace_state, "state=1") == 0);
 
     ctr_encode_opentelemetry_destroy(buf);
     ctr_destroy(decoded);
