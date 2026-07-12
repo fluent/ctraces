@@ -96,6 +96,14 @@ static inline int pack_cfl_variant_int64(mpack_writer_t *writer,
     return 0;
 }
 
+static inline int pack_cfl_variant_uint64(mpack_writer_t *writer,
+                                          uint64_t value)
+{
+    mpack_write_u64(writer, value);
+
+    return 0;
+}
+
 static inline int pack_cfl_variant_double(mpack_writer_t *writer,
                                           double value)
 {
@@ -177,6 +185,9 @@ static inline int pack_cfl_variant(mpack_writer_t *writer,
     else if (value->type == CFL_VARIANT_INT) {
         result = pack_cfl_variant_int64(writer, value->data.as_int64);
     }
+    else if (value->type == CFL_VARIANT_UINT) {
+        result = pack_cfl_variant_uint64(writer, value->data.as_uint64);
+    }
     else if (value->type == CFL_VARIANT_DOUBLE) {
         result = pack_cfl_variant_double(writer, value->data.as_double);
     }
@@ -191,8 +202,12 @@ static inline int pack_cfl_variant(mpack_writer_t *writer,
                                          value->data.as_bytes,
                                          cfl_sds_len(value->data.as_bytes));
     }
+    else if (value->type == CFL_VARIANT_NULL) {
+        mpack_write_nil(writer);
+        result = 0;
+    }
     else if (value->type == CFL_VARIANT_REFERENCE) {
-        result = pack_cfl_variant_string(writer, value->data.as_string);
+        result = -1;
     }
     else {
         result = -1;
@@ -531,11 +546,7 @@ static inline int unpack_cfl_variant_uint64(mpack_reader_t *reader,
         return result;
     }
 
-    if (mpack_tag_uint_value(&tag) > INT64_MAX) {
-        return -2;
-    }
-
-    *value = cfl_variant_create_from_int64((int64_t) mpack_tag_uint_value(&tag));
+    *value = cfl_variant_create_from_uint64(mpack_tag_uint_value(&tag));
 
     if (*value == NULL) {
         return -3;
@@ -579,6 +590,25 @@ static inline int unpack_cfl_variant_double(mpack_reader_t *reader,
 
     *value = cfl_variant_create_from_double(mpack_tag_double_value(&tag));
 
+    if (*value == NULL) {
+        return -3;
+    }
+
+    return 0;
+}
+
+static inline int unpack_cfl_variant_null(mpack_reader_t *reader,
+                                          struct cfl_variant **value)
+{
+    int result;
+    mpack_tag_t tag;
+
+    result = unpack_cfl_variant_read_tag(reader, &tag, mpack_type_nil);
+    if (result != 0) {
+        return result;
+    }
+
+    *value = cfl_variant_create_from_null();
     if (*value == NULL) {
         return -3;
     }
@@ -675,6 +705,9 @@ static inline int unpack_cfl_variant_depth(mpack_reader_t *reader,
     }
     else if (value_type == mpack_type_bin) {
         result = unpack_cfl_variant_binary(reader, value);
+    }
+    else if (value_type == mpack_type_nil) {
+        result = unpack_cfl_variant_null(reader, value);
     }
     else {
         result = -1;
