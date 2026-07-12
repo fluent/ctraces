@@ -588,7 +588,13 @@ void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
         }
 
         ctr_link->attr = ctr_attributes;
+        if (link->trace_state != NULL && link->trace_state[0] != '\0') {
+            if (ctr_link_set_trace_state(ctr_link, link->trace_state) != 0) {
+                return;
+            }
+        }
         ctr_link_set_dropped_attr_count(ctr_link, link->dropped_attributes_count);
+        ctr_link_set_flags(ctr_link, link->flags);
     }
 
 }
@@ -718,6 +724,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                 }
 
                 ctr_span_kind_set(span, otel_span->kind);
+                ctr_span_set_flags(span, otel_span->flags);
                 ctr_span_start_ts(ctr, span, otel_span->start_time_unix_nano);
                 ctr_span_end_ts(ctr, span, otel_span->end_time_unix_nano);
 

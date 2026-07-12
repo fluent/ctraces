@@ -306,6 +306,13 @@ static int unpack_link_dropped_attributes_count(mpack_reader_t *reader, size_t i
     return ctr_mpack_consume_uint32_tag(reader, &context->link->dropped_attr_count);
 }
 
+static int unpack_link_flags(mpack_reader_t *reader, size_t index, void *ctx)
+{
+    struct ctr_msgpack_decode_context *context = ctx;
+
+    return ctr_mpack_consume_uint32_tag(reader, &context->link->flags);
+}
+
 static int unpack_link_attributes(mpack_reader_t *reader, size_t index, void *ctx)
 {
     struct ctr_msgpack_decode_context *context = ctx;
@@ -349,6 +356,7 @@ static int unpack_link(mpack_reader_t *reader, size_t index, void *ctx)
             {"trace_state",              unpack_link_trace_state},
             {"attributes",               unpack_link_attributes},
             {"dropped_attributes_count", unpack_link_dropped_attributes_count},
+            {"flags",                    unpack_link_flags},
             {NULL,                       NULL}
         };
 
@@ -455,6 +463,20 @@ static int unpack_span_trace_state(mpack_reader_t *reader, size_t index, void *c
     }
 
     return ctr_mpack_consume_string_or_nil_tag(reader, &context->span->trace_state);
+}
+
+static int unpack_span_flags(mpack_reader_t *reader, size_t index, void *ctx)
+{
+    struct ctr_msgpack_decode_context *context = ctx;
+    uint32_t flags;
+    int result;
+
+    result = ctr_mpack_consume_uint32_tag(reader, &flags);
+    if (result == CTR_MPACK_SUCCESS) {
+        context->span->flags = flags;
+    }
+
+    return result;
 }
 
 static int unpack_span_name(mpack_reader_t *reader, size_t index, void *ctx)
@@ -590,6 +612,7 @@ static int unpack_span(mpack_reader_t *reader, size_t index, void *ctx)
             {"span_id",                  unpack_span_span_id},
             {"parent_span_id",           unpack_span_parent_span_id},
             {"trace_state",              unpack_span_trace_state},
+            {"flags",                    unpack_span_flags},
             {"name",                     unpack_span_name},
             {"kind",                     unpack_span_kind},
             {"start_time_unix_nano",     unpack_span_start_time_unix_nano},

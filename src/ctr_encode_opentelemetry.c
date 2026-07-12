@@ -825,6 +825,7 @@ static void otel_span_set_links(Opentelemetry__Proto__Trace__V1__Span *otel_span
         otel_link->n_attributes = get_attributes_count(link->attr);
         otel_link->attributes = set_attributes_from_ctr(link->attr);
         otel_link->dropped_attributes_count = link->dropped_attr_count;
+        otel_link->flags = link->flags;
 
         otel_links[link_index++] = otel_link;
     }
@@ -842,6 +843,7 @@ static void set_span(Opentelemetry__Proto__Trace__V1__Span *otel_span,
     otel_span_set_parent_span_id(otel_span, span->parent_span_id);
     otel_span_set_kind(otel_span, span->kind);
     otel_span_set_trace_state(otel_span, span->trace_state);
+    otel_span->flags = span->flags;
     otel_span_set_start_time(otel_span, span->start_time_unix_nano);
     otel_span_set_end_time(otel_span, span->end_time_unix_nano);
     otel_span_set_status(otel_span, span->status);
@@ -851,6 +853,7 @@ static void set_span(Opentelemetry__Proto__Trace__V1__Span *otel_span,
     otel_span_set_events(otel_span, &span->events);
     otel_span_set_dropped_events_count(otel_span, span->dropped_events_count);
     otel_span_set_links(otel_span, &span->links);
+    otel_span->dropped_links_count = span->dropped_links_count;
 }
 
 static Opentelemetry__Proto__Trace__V1__Span **initialize_spans(size_t span_count)
