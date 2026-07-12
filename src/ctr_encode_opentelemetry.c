@@ -231,6 +231,9 @@ static Opentelemetry__Proto__Common__V1__AnyValue *otlp_any_value_initialize(int
     else if (data_type == CFL_VARIANT_INT) {
         value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE;
     }
+    else if (data_type == CFL_VARIANT_UINT) {
+        value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_INT_VALUE;
+    }
     else if (data_type == CFL_VARIANT_DOUBLE) {
         value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_DOUBLE_VALUE;
     }
@@ -258,9 +261,6 @@ static Opentelemetry__Proto__Common__V1__AnyValue *otlp_any_value_initialize(int
     }
     else if (data_type == CFL_VARIANT_BYTES) {
         value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_BYTES_VALUE;
-    }
-    else if (data_type == CFL_VARIANT_REFERENCE) {
-        value->value_case = OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_STRING_VALUE;
     }
     else {
         free(value);
@@ -520,6 +520,17 @@ static inline Opentelemetry__Proto__Common__V1__AnyValue *ctr_variant_to_otlp_an
     else if (value->type == CFL_VARIANT_INT) {
         result = ctr_variant_int64_to_otlp_any_value(value);
     }
+    else if (value->type == CFL_VARIANT_UINT) {
+        if (value->data.as_uint64 > INT64_MAX) {
+            result = NULL;
+        }
+        else {
+            result = otlp_any_value_initialize(CFL_VARIANT_UINT, 0);
+            if (result != NULL) {
+                result->int_value = (int64_t) value->data.as_uint64;
+            }
+        }
+    }
     else if (value->type == CFL_VARIANT_DOUBLE) {
         result = ctr_variant_double_to_otlp_any_value(value);
     }
@@ -531,9 +542,6 @@ static inline Opentelemetry__Proto__Common__V1__AnyValue *ctr_variant_to_otlp_an
     }
     else if (value->type == CFL_VARIANT_BYTES) {
         result = ctr_variant_binary_to_otlp_any_value(value);
-    }
-    else if (value->type == CFL_VARIANT_REFERENCE) {
-        result = ctr_variant_string_to_otlp_any_value(value);
     }
     else {
         result = NULL;
