@@ -508,8 +508,15 @@ static int unpack_span_name(mpack_reader_t *reader, size_t index, void *ctx)
 static int unpack_span_kind(mpack_reader_t *reader, size_t index, void *ctx)
 {
     struct ctr_msgpack_decode_context *context = ctx;
+    int32_t kind;
+    int result;
 
-    return ctr_mpack_consume_int32_tag(reader, &context->span->kind);
+    result = ctr_mpack_consume_int32_tag(reader, &kind);
+    if (result == CTR_MPACK_SUCCESS && ctr_span_kind_set(context->span, kind) != 0) {
+        return CTR_MPACK_CORRUPT_INPUT_DATA_ERROR;
+    }
+
+    return result;
 }
 
 static int unpack_span_start_time_unix_nano(mpack_reader_t *reader, size_t index, void *ctx)
@@ -585,8 +592,18 @@ static int unpack_span_links(mpack_reader_t *reader, size_t index, void *ctx)
 static int unpack_span_status_code(mpack_reader_t *reader, size_t index, void *ctx)
 {
     struct ctr_msgpack_decode_context *context = ctx;
+    int32_t code;
+    int result;
 
-    return ctr_mpack_consume_int32_tag(reader, &context->span->status.code);
+    result = ctr_mpack_consume_int32_tag(reader, &code);
+    if (result == CTR_MPACK_SUCCESS) {
+        if (code < CTRACE_SPAN_STATUS_CODE_UNSET || code > CTRACE_SPAN_STATUS_CODE_ERROR) {
+            return CTR_MPACK_CORRUPT_INPUT_DATA_ERROR;
+        }
+        context->span->status.code = code;
+    }
+
+    return result;
 }
 
 static int unpack_span_status_message(mpack_reader_t *reader, size_t index, void *ctx)
