@@ -670,6 +670,30 @@ void test_otlp_decode_span_empty_name()
     free(wire);
 }
 
+void test_otlp_decode_invalid_kind()
+{
+    Opentelemetry__Proto__Trace__V1__Span span;
+    uint8_t *wire;
+    size_t wire_len;
+    size_t offset;
+    struct ctrace *decoded;
+    int ret;
+
+    opentelemetry__proto__trace__v1__span__init(&span);
+    span.name = "invalid-kind";
+    span.kind = 99;
+    wire = pack_one_span_payload(&span, &wire_len);
+    TEST_ASSERT(wire != NULL);
+
+    offset = 0;
+    decoded = NULL;
+    ret = ctr_decode_opentelemetry_create(&decoded, (char *) wire, wire_len, &offset);
+    TEST_CHECK(ret != CTR_DECODE_OPENTELEMETRY_SUCCESS);
+    TEST_CHECK(decoded == NULL);
+
+    free(wire);
+}
+
 TEST_LIST = {
     {"otlp_roundtrip",                  test_otlp_roundtrip},
     {"otlp_minimal_trace",              test_otlp_minimal_trace},
@@ -686,5 +710,6 @@ TEST_LIST = {
     {"otlp_decode_attribute_null_value", test_otlp_decode_attribute_null_value},
     {"otlp_decode_nested_malformed_kv",  test_otlp_decode_nested_malformed_kv},
     {"otlp_decode_span_empty_name",      test_otlp_decode_span_empty_name},
+    {"otlp_decode_invalid_kind",         test_otlp_decode_invalid_kind},
     { 0 }
 };

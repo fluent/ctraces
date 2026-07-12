@@ -222,6 +222,28 @@ void test_reject_cross_context_span()
     ctr_destroy(ctx_a);
 }
 
+void test_reject_invalid_span_enums()
+{
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "enums", NULL);
+
+    TEST_CHECK(ctr_span_kind_set(span, CTRACE_SPAN_CONSUMER + 1) != 0);
+    TEST_CHECK(span->kind == CTRACE_SPAN_INTERNAL);
+    TEST_CHECK(ctr_span_set_status(span, CTRACE_SPAN_STATUS_CODE_ERROR + 1,
+                                   "invalid") != 0);
+    TEST_CHECK(span->status.code == CTRACE_SPAN_STATUS_CODE_UNSET);
+    TEST_CHECK(span->status.message == NULL);
+
+    ctr_destroy(ctx);
+}
+
 TEST_LIST = {
     {"span", test_span},
     {"resource_span_direct_destroy", test_resource_span_direct_destroy},
@@ -230,5 +252,6 @@ TEST_LIST = {
     {"text_encoder_optional_and_long_strings", test_text_encoder_optional_and_long_strings},
     {"owner_self_assignment", test_owner_self_assignment},
     {"reject_cross_context_span", test_reject_cross_context_span},
+    {"reject_invalid_span_enums", test_reject_invalid_span_enums},
     { 0 }
 };
