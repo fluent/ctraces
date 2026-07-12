@@ -535,7 +535,7 @@ static void msgpack_encode_decode_and_compare(struct ctrace *context)
     result = ctr_decode_msgpack_create(&decoded_context, msgpack_text_buffer, msgpack_text_size, &offset);
     TEST_ASSERT(result == 0);
 
-    validation_text_buffer = ctr_encode_text_create(context);
+    validation_text_buffer = ctr_encode_text_create(decoded_context);
     TEST_ASSERT(validation_text_buffer != NULL);
 
     TEST_ASSERT(strcmp(referece_text_buffer, validation_text_buffer) == 0);
