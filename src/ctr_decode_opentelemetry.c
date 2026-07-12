@@ -746,21 +746,37 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                 }
 
                 /* copy data from otel span to ctraces span representation */
-                ctr_span_set_trace_id(span, otel_span->trace_id.data, otel_span->trace_id.len);
-                ctr_span_set_span_id(span, otel_span->span_id.data, otel_span->span_id.len);
-                ctr_span_set_parent_span_id(span, otel_span->parent_span_id.data, otel_span->parent_span_id.len);
+                if ((otel_span->trace_id.len > 0 &&
+                     ctr_span_set_trace_id(span, otel_span->trace_id.data,
+                                           otel_span->trace_id.len) != 0) ||
+                    (otel_span->span_id.len > 0 &&
+                     ctr_span_set_span_id(span, otel_span->span_id.data,
+                                          otel_span->span_id.len) != 0) ||
+                    (otel_span->parent_span_id.len > 0 &&
+                     ctr_span_set_parent_span_id(span, otel_span->parent_span_id.data,
+                                                 otel_span->parent_span_id.len) != 0)) {
+                    return decode_opentelemetry_error(
+                        service_request, ctr, CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR);
+                }
 
                 if (otel_span->trace_state && strlen(otel_span->trace_state) > 0) {
                     ctr_span_set_trace_state(span, otel_span->trace_state, strlen(otel_span->trace_state));
                 }
 
-                ctr_span_kind_set(span, otel_span->kind);
+                if (ctr_span_kind_set(span, otel_span->kind) != 0) {
+                    return decode_opentelemetry_error(
+                        service_request, ctr, CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD);
+                }
                 ctr_span_set_flags(span, otel_span->flags);
                 ctr_span_start_ts(ctr, span, otel_span->start_time_unix_nano);
                 ctr_span_end_ts(ctr, span, otel_span->end_time_unix_nano);
 
                 if (otel_span->status) {
-                    ctr_span_set_status(span, otel_span->status->code, otel_span->status->message);
+                    if (ctr_span_set_status(span, otel_span->status->code,
+                                            otel_span->status->message) != 0) {
+                        return decode_opentelemetry_error(
+                            service_request, ctr, CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD);
+                    }
                 }
 
                 if (span_set_attributes(span, otel_span->n_attributes,
