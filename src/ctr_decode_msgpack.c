@@ -756,6 +756,16 @@ int ctr_decode_msgpack_create(struct ctrace **out_context, char *in_buf, size_t 
     mpack_reader_t                    reader;
     int                               result;
 
+    if (out_context == NULL || in_buf == NULL || offset == NULL) {
+        return CTR_DECODE_MSGPACK_INVALID_ARGUMENT_ERROR;
+    }
+
+    *out_context = NULL;
+
+    if (*offset >= in_size) {
+        return CTR_DECODE_MSGPACK_INSUFFICIENT_DATA;
+    }
+
     memset(&context, 0, sizeof(context));
 
     context.trace = ctr_create(NULL);

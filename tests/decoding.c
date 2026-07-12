@@ -23,6 +23,7 @@
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_encode_msgpack.h>
 #include <ctraces/ctr_decode_msgpack.h>
+#include <ctraces/ctr_mpack_utils.h>
 #include <ctraces/ctr_encode_text.h>
 #include "ctr_tests.h"
 
@@ -623,6 +624,47 @@ void test_msgpack_preserves_flags()
     ctr_destroy(ctx);
 }
 
+void test_msgpack_invalid_offset()
+{
+    char data[] = {0x80};
+    size_t offset;
+    struct ctrace *decoded;
+    int result;
+
+    offset = sizeof(data) + 1;
+    decoded = (struct ctrace *) 0x1;
+    result = ctr_decode_msgpack_create(&decoded, data, sizeof(data), &offset);
+    TEST_CHECK(result == CTR_DECODE_MSGPACK_INSUFFICIENT_DATA);
+    TEST_CHECK(decoded == NULL);
+}
+
+void test_msgpack_integer_ranges()
+{
+    char negative[] = {(char) 0xff};
+    char overflow_u32[] = {(char) 0xcf, 0x00, 0x00, 0x00, 0x01,
+                           0x00, 0x00, 0x00, 0x00};
+    char overflow_i32[] = {(char) 0xce, (char) 0x80, 0x00, 0x00, 0x00};
+    mpack_reader_t reader;
+    uint64_t u64;
+    uint32_t u32;
+    int32_t i32;
+
+    mpack_reader_init_data(&reader, negative, sizeof(negative));
+    TEST_CHECK(ctr_mpack_consume_uint64_tag(&reader, &u64) ==
+               CTR_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    mpack_reader_destroy(&reader);
+
+    mpack_reader_init_data(&reader, overflow_u32, sizeof(overflow_u32));
+    TEST_CHECK(ctr_mpack_consume_uint32_tag(&reader, &u32) ==
+               CTR_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    mpack_reader_destroy(&reader);
+
+    mpack_reader_init_data(&reader, overflow_i32, sizeof(overflow_i32));
+    TEST_CHECK(ctr_mpack_consume_int32_tag(&reader, &i32) ==
+               CTR_MPACK_CORRUPT_INPUT_DATA_ERROR);
+    mpack_reader_destroy(&reader);
+}
+
 void test_simple_to_msgpack_and_back()
 {
     struct ctrace *ctx;
@@ -782,5 +824,7 @@ TEST_LIST = {
     {"cmt_msgpack",                    test_msgpack_to_cmt},
     {"empty_spans",                    test_msgpack_to_ctr_with_empty_spans},
     {"msgpack_preserves_flags",         test_msgpack_preserves_flags},
+    {"msgpack_invalid_offset",          test_msgpack_invalid_offset},
+    {"msgpack_integer_ranges",          test_msgpack_integer_ranges},
     { 0 }
 };
