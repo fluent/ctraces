@@ -158,6 +158,8 @@ void ctr_span_event_delete(struct ctrace_span_event *event);
 int ctr_span_event_set_attribute_string(struct ctrace_span_event *event, char *key, char *value);
 int ctr_span_event_set_attribute_bool(struct ctrace_span_event *event, char *key, int b);
 int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value);
+int ctr_span_event_set_attribute_int64(struct ctrace_span_event *event, char *key,
+                                       int64_t value);
 int ctr_span_event_set_attribute_double(struct ctrace_span_event *event, char *key, double value);
 int ctr_span_event_set_attribute_array(struct ctrace_span_event *event, char *key,
                                        struct cfl_array *value);

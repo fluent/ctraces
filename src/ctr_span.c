@@ -499,6 +499,11 @@ int ctr_span_event_set_attribute_int64(struct ctrace_span_event *event, char *ke
     return ctr_attributes_set_int64(event->attr, key, value);
 }
 
+int ctr_span_event_set_attribute_int(struct ctrace_span_event *event, char *key, int value)
+{
+    return ctr_span_event_set_attribute_int64(event, key, value);
+}
+
 int ctr_span_event_set_attribute_double(struct ctrace_span_event *event, char *key, double value)
 {
     return ctr_attributes_set_double(event->attr, key, value);
