@@ -177,11 +177,58 @@ void test_text_encoder_optional_and_long_strings()
     ctr_destroy(ctx);
 }
 
+void test_owner_self_assignment()
+{
+    struct ctrace *ctx;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_instrumentation_scope *scope;
+    struct ctrace_span *span;
+    struct ctrace_span_event *event;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    scope = ctr_instrumentation_scope_create("scope", "1", 0, NULL);
+    ctr_scope_span_set_instrumentation_scope(ss, scope);
+    span = ctr_span_create(ctx, ss, "self", NULL);
+    event = ctr_span_event_add(span, "self");
+
+    TEST_CHECK(ctr_span_set_attributes(span, span->attr) == 0);
+    TEST_CHECK(ctr_span_event_set_attributes(event, event->attr) == 0);
+    ctr_scope_span_set_instrumentation_scope(ss, ss->instrumentation_scope);
+    TEST_CHECK(strcmp(ss->instrumentation_scope->name, "scope") == 0);
+
+    ctr_destroy(ctx);
+}
+
+void test_reject_cross_context_span()
+{
+    struct ctrace *ctx_a;
+    struct ctrace *ctx_b;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+
+    ctx_a = ctr_create(NULL);
+    ctx_b = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx_a);
+    ss = ctr_scope_span_create(rs);
+
+    TEST_CHECK(ctr_span_create(ctx_b, ss, "invalid", NULL) == NULL);
+    TEST_CHECK(cfl_list_is_empty(&ctx_b->span_list));
+    TEST_CHECK(cfl_list_is_empty(&ss->spans));
+
+    ctr_destroy(ctx_b);
+    ctr_destroy(ctx_a);
+}
+
 TEST_LIST = {
     {"span", test_span},
     {"resource_span_direct_destroy", test_resource_span_direct_destroy},
     {"random_id_length", test_random_id_length},
     {"event_integer_api", test_event_integer_api},
     {"text_encoder_optional_and_long_strings", test_text_encoder_optional_and_long_strings},
+    {"owner_self_assignment", test_owner_self_assignment},
+    {"reject_cross_context_span", test_reject_cross_context_span},
     { 0 }
 };

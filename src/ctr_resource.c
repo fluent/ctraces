@@ -105,6 +105,7 @@ struct ctrace_resource_span *ctr_resource_span_create(struct ctrace *ctx)
         return NULL;
     }
     cfl_list_init(&resource_span->scope_spans);
+    resource_span->ctx = ctx;
 
     /* create an empty resource */
     resource_span->resource = ctr_resource_create();

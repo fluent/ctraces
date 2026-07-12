@@ -28,7 +28,8 @@ struct ctrace_span *ctr_span_create(struct ctrace *ctx, struct ctrace_scope_span
 {
     struct ctrace_span *span;
 
-    if (!ctx || !scope_span || !name) {
+    if (!ctx || !scope_span || !name || !scope_span->resource_span ||
+        scope_span->resource_span->ctx != ctx) {
         return NULL;
     }
 
@@ -215,11 +216,10 @@ int ctr_span_set_attributes(struct ctrace_span *span, struct ctrace_attributes *
         return -1;
     }
 
-    if (span->attr) {
+    if (span->attr != attr) {
         ctr_attributes_destroy(span->attr);
+        span->attr = attr;
     }
-
-    span->attr = attr;
     return 0;
 }
 
@@ -528,11 +528,10 @@ int ctr_span_event_set_attributes(struct ctrace_span_event *event, struct ctrace
         return -1;
     }
 
-    if (event->attr) {
+    if (event->attr != attr) {
         ctr_attributes_destroy(event->attr);
+        event->attr = attr;
     }
-
-    event->attr = attr;
     return 0;
 }
 

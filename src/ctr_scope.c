@@ -90,11 +90,12 @@ void ctr_scope_span_set_instrumentation_scope(struct ctrace_scope_span *scope_sp
                                               struct ctrace_instrumentation_scope *scope)
 {
     /* Safeguard against leaks */
-    if (scope_span->instrumentation_scope != NULL) {
-        ctr_instrumentation_scope_destroy(scope_span->instrumentation_scope);
+    if (scope_span->instrumentation_scope != scope) {
+        if (scope_span->instrumentation_scope != NULL) {
+            ctr_instrumentation_scope_destroy(scope_span->instrumentation_scope);
+        }
+        scope_span->instrumentation_scope = scope;
     }
-
-    scope_span->instrumentation_scope = scope;
 }
 
 struct ctrace_instrumentation_scope *ctr_instrumentation_scope_create(char *name, char *version,
