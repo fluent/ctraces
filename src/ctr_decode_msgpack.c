@@ -328,6 +328,10 @@ static int unpack_link_attributes(mpack_reader_t *reader, size_t index, void *ct
         if (result == 0) {
             if (context->link->attr == NULL) {
                 context->link->attr = ctr_attributes_create();
+                if (context->link->attr == NULL) {
+                    cfl_kvlist_destroy(attributes);
+                    return CTR_DECODE_MSGPACK_ALLOCATION_ERROR;
+                }
             }
 
             if (context->link->attr->kv != NULL) {
@@ -384,9 +388,12 @@ static int unpack_span_trace_id(mpack_reader_t *reader, size_t index, void *ctx)
         decoded_id = ctr_id_from_base16(value);
 
         if (decoded_id != NULL) {
-            ctr_span_set_trace_id_with_cid(context->span, decoded_id);
+            result = ctr_span_set_trace_id_with_cid(context->span, decoded_id);
 
             ctr_id_destroy(decoded_id);
+            if (result != 0) {
+                result = CTR_DECODE_MSGPACK_ALLOCATION_ERROR;
+            }
         }
         else {
             result = CTR_MPACK_CORRUPT_INPUT_DATA_ERROR;
@@ -411,9 +418,12 @@ static int unpack_span_span_id(mpack_reader_t *reader, size_t index, void *ctx)
         decoded_id = ctr_id_from_base16(value);
 
         if (decoded_id != NULL) {
-            ctr_span_set_span_id_with_cid(context->span, decoded_id);
+            result = ctr_span_set_span_id_with_cid(context->span, decoded_id);
 
             ctr_id_destroy(decoded_id);
+            if (result != 0) {
+                result = CTR_DECODE_MSGPACK_ALLOCATION_ERROR;
+            }
         }
         else {
             result = CTR_MPACK_CORRUPT_INPUT_DATA_ERROR;
@@ -438,9 +448,12 @@ static int unpack_span_parent_span_id(mpack_reader_t *reader, size_t index, void
         decoded_id = ctr_id_from_base16(value);
 
         if (decoded_id != NULL) {
-            ctr_span_set_parent_span_id_with_cid(context->span, decoded_id);
+            result = ctr_span_set_parent_span_id_with_cid(context->span, decoded_id);
 
             ctr_id_destroy(decoded_id);
+            if (result != 0) {
+                result = CTR_DECODE_MSGPACK_ALLOCATION_ERROR;
+            }
         }
         else {
             result = CTR_MPACK_CORRUPT_INPUT_DATA_ERROR;
