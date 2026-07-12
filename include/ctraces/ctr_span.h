@@ -68,7 +68,7 @@ struct ctrace_span {
     struct ctrace_id *span_id;        /* the unique span ID    */
     struct ctrace_id *parent_span_id; /* any parent ? a NULL means a root span */
     cfl_sds_t trace_state;            /* trace state */
-    int32_t flags;                    /* flags */
+    uint32_t flags;                   /* flags */
 
     cfl_sds_t name;                   /* user-name assigned */
 
