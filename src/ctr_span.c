@@ -179,6 +179,10 @@ int ctr_span_set_parent_span_id_with_cid(struct ctrace_span *span, struct ctrace
 
 int ctr_span_kind_set(struct ctrace_span *span, int kind)
 {
+    if (span == NULL) {
+        return -1;
+    }
+
     if (kind < CTRACE_SPAN_UNSPECIFIED || kind > CTRACE_SPAN_CONSUMER) {
         return -1;
     }
@@ -290,6 +294,11 @@ int ctr_span_set_status(struct ctrace_span *span, int code, char *message)
 {
     cfl_sds_t new_message;
     struct ctrace_span_status *status;
+
+    if (span == NULL || code < CTRACE_SPAN_STATUS_CODE_UNSET ||
+        code > CTRACE_SPAN_STATUS_CODE_ERROR) {
+        return -1;
+    }
 
     new_message = NULL;
     if (message) {
