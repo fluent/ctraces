@@ -260,6 +260,46 @@ void test_otlp_bytes_in_array()
     ctr_destroy(ctx);
 }
 
+void test_otlp_bytes_attribute()
+{
+    cfl_sds_t buf;
+    size_t offset = 0;
+    struct ctrace *ctx;
+    struct ctrace *decoded = NULL;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    struct cfl_variant *value;
+    int ret;
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "bytes", NULL);
+    TEST_ASSERT(span != NULL);
+    TEST_ASSERT(cfl_kvlist_insert_bytes(span->attr->kv, "blob", "\xDE\xAD", 2,
+                                        CFL_FALSE) == 0);
+
+    buf = ctr_encode_opentelemetry_create(ctx);
+    TEST_ASSERT(buf != NULL);
+    ret = ctr_decode_opentelemetry_create(&decoded, buf, cfl_sds_len(buf), &offset);
+    TEST_ASSERT(ret == CTR_DECODE_OPENTELEMETRY_SUCCESS);
+
+    rs = cfl_list_entry(decoded->resource_spans.next,
+                        struct ctrace_resource_span, _head);
+    ss = cfl_list_entry(rs->scope_spans.next, struct ctrace_scope_span, _head);
+    span = cfl_list_entry(ss->spans.next, struct ctrace_span, _head);
+    value = cfl_kvlist_fetch(span->attr->kv, "blob");
+    TEST_ASSERT(value != NULL);
+    TEST_CHECK(value->type == CFL_VARIANT_BYTES);
+    TEST_CHECK(cfl_sds_len(value->data.as_bytes) == 2);
+    TEST_CHECK(memcmp(value->data.as_bytes, "\xDE\xAD", 2) == 0);
+
+    ctr_encode_opentelemetry_destroy(buf);
+    ctr_destroy(decoded);
+    ctr_destroy(ctx);
+}
+
 /* multiple resource_spans, each with multiple scope_spans, each with
  * multiple spans - exercises every encoder/decoder outer loop including
  * the per-resource_span/per-scope_span/per-span destroy paths.
@@ -546,6 +586,7 @@ TEST_LIST = {
     {"otlp_roundtrip",                  test_otlp_roundtrip},
     {"otlp_minimal_trace",              test_otlp_minimal_trace},
     {"otlp_bytes_in_array",             test_otlp_bytes_in_array},
+    {"otlp_bytes_attribute",            test_otlp_bytes_attribute},
     {"otlp_multiple_spans",             test_otlp_multiple_spans},
     {"otlp_decode_corrupted",           test_otlp_decode_corrupted},
     {"otlp_decode_missing_resource",    test_otlp_decode_missing_resource},

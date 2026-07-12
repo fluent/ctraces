@@ -313,7 +313,8 @@ static int convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
 
     switch (value_type) {
         case CTR_OPENTELEMETRY_TYPE_ATTRIBUTE:
-            result = -1;
+            result = cfl_kvlist_insert_bytes(ctr_val->ctr_attr->kv, key,
+                                             buf, len, CFL_FALSE);
             break;
 
         case CTR_OPENTELEMETRY_TYPE_ARRAY:
@@ -532,15 +533,15 @@ static int resource_set_data(struct ctrace_resource *resource,
     return 0;
 }
 
-void ctr_scope_span_set_scope(struct ctrace_scope_span *scope_span,
-                              Opentelemetry__Proto__Common__V1__InstrumentationScope *scope)
+static int ctr_scope_span_set_scope(struct ctrace_scope_span *scope_span,
+                                    Opentelemetry__Proto__Common__V1__InstrumentationScope *scope)
 {
     struct ctrace_attributes *ctr_attributes;
     struct ctrace_instrumentation_scope *ins_scope;
 
     ctr_attributes = convert_otel_attrs(scope->n_attributes, scope->attributes);
     if (ctr_attributes == NULL) {
-        return;
+        return -1;
     }
 
     ins_scope = ctr_instrumentation_scope_create(scope->name, scope->version,
@@ -548,14 +549,16 @@ void ctr_scope_span_set_scope(struct ctrace_scope_span *scope_span,
                                                  ctr_attributes);
     if (!ins_scope) {
         ctr_attributes_destroy(ctr_attributes);
-        return;
+        return -1;
     }
 
     ctr_scope_span_set_instrumentation_scope(scope_span, ins_scope);
+
+    return 0;
 }
 
-void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
-     Opentelemetry__Proto__Trace__V1__Span__Link **links)
+static int ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
+                              Opentelemetry__Proto__Trace__V1__Span__Link **links)
 {
     int index_link;
     struct ctrace_link *ctr_link;
@@ -563,7 +566,7 @@ void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
     Opentelemetry__Proto__Trace__V1__Span__Link *link;
 
     if (n_links > 0 && links == NULL) {
-        return;
+        return -1;
     }
 
     for (index_link = 0; index_link < n_links; index_link++) {
@@ -578,25 +581,37 @@ void ctr_span_set_links(struct ctrace_span *ctr_span, size_t n_links,
                                    link->span_id.data, link->span_id.len);
 
         if (ctr_link == NULL) {
-            return;
+            return -1;
         }
 
         ctr_attributes = convert_otel_attrs(link->n_attributes, link->attributes);
 
         if (ctr_attributes == NULL) {
-            return;
+            return -1;
         }
 
         ctr_link->attr = ctr_attributes;
         if (link->trace_state != NULL && link->trace_state[0] != '\0') {
             if (ctr_link_set_trace_state(ctr_link, link->trace_state) != 0) {
-                return;
+                return -1;
             }
         }
         ctr_link_set_dropped_attr_count(ctr_link, link->dropped_attributes_count);
         ctr_link_set_flags(ctr_link, link->flags);
     }
 
+    return 0;
+}
+
+static int decode_opentelemetry_error(
+    Opentelemetry__Proto__Collector__Trace__V1__ExportTraceServiceRequest *request,
+    struct ctrace *ctr, int result)
+{
+    opentelemetry__proto__collector__trace__v1__export_trace_service_request__free_unpacked(
+        request, NULL);
+    ctr_destroy(ctr);
+
+    return result;
 }
 
 int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
@@ -616,6 +631,12 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
     Opentelemetry__Proto__Trace__V1__ResourceSpans *otel_resource_span;
     Opentelemetry__Proto__Trace__V1__ScopeSpans *otel_scope_span;
     Opentelemetry__Proto__Trace__V1__Span *otel_span;
+
+    if (out_ctr == NULL || in_buf == NULL || offset == NULL) {
+        return CTR_DECODE_OPENTELEMETRY_INVALID_ARGUMENT;
+    }
+
+    *out_ctr = NULL;
 
     if (*offset >= in_size) {
         return CTR_DECODE_OPENTELEMETRY_INSUFFICIENT_DATA;
@@ -650,11 +671,18 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
 
         /* resource span */
         resource_span = ctr_resource_span_create(ctr);
+        if (resource_span == NULL) {
+            return decode_opentelemetry_error(service_request, ctr,
+                                               CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR);
+        }
         ctr_resource_span_set_schema_url(resource_span, otel_resource_span->schema_url);
 
         /* resource */
         resource = ctr_resource_span_get_resource(resource_span);
-        resource_set_data(resource, otel_resource_span->resource);
+        if (resource_set_data(resource, otel_resource_span->resource) != 0) {
+            return decode_opentelemetry_error(service_request, ctr,
+                                               CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR);
+        }
 
         ctr_resource_set_dropped_attr_count(resource, otel_resource_span->resource->dropped_attributes_count);
 
@@ -686,7 +714,10 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
             ctr_scope_span_set_schema_url(scope_span, otel_scope_span->schema_url);
 
             if (otel_scope_span->scope != NULL) {
-                ctr_scope_span_set_scope(scope_span, otel_scope_span->scope);
+                if (ctr_scope_span_set_scope(scope_span, otel_scope_span->scope) != 0) {
+                    return decode_opentelemetry_error(
+                        service_request, ctr, CTR_DECODE_OPENTELEMETRY_ALLOCATION_ERROR);
+                }
             }
 
             if (otel_scope_span->n_spans > 0 && otel_scope_span->spans == NULL) {
@@ -732,14 +763,21 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
                     ctr_span_set_status(span, otel_span->status->code, otel_span->status->message);
                 }
 
-                span_set_attributes(span, otel_span->n_attributes, otel_span->attributes);
-                span_set_events(span, otel_span->n_events, otel_span->events);
+                if (span_set_attributes(span, otel_span->n_attributes,
+                                        otel_span->attributes) != 0 ||
+                    span_set_events(span, otel_span->n_events, otel_span->events) != 0) {
+                    return decode_opentelemetry_error(
+                        service_request, ctr, CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD);
+                }
 
                 ctr_span_set_dropped_attributes_count(span, otel_span->dropped_attributes_count);
                 ctr_span_set_dropped_events_count(span, otel_span->dropped_events_count);
                 ctr_span_set_dropped_links_count(span, otel_span->dropped_links_count);
 
-                ctr_span_set_links(span, otel_span->n_links, otel_span->links);
+                if (ctr_span_set_links(span, otel_span->n_links, otel_span->links) != 0) {
+                    return decode_opentelemetry_error(
+                        service_request, ctr, CTR_DECODE_OPENTELEMETRY_INVALID_PAYLOAD);
+                }
             }
         }
     }
