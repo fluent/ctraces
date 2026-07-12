@@ -638,7 +638,7 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
 
     *out_ctr = NULL;
 
-    if (*offset >= in_size) {
+    if (*offset > in_size || (*offset == in_size && in_size != 0)) {
         return CTR_DECODE_OPENTELEMETRY_INSUFFICIENT_DATA;
     }
 
