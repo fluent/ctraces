@@ -24,6 +24,7 @@
 #include <ctraces/ctr_encode_msgpack.h>
 #include <ctraces/ctr_decode_msgpack.h>
 #include <ctraces/ctr_mpack_utils.h>
+#include <ctraces/ctr_variant_utils.h>
 #include <ctraces/ctr_encode_text.h>
 #include "ctr_tests.h"
 
@@ -665,6 +666,84 @@ void test_msgpack_integer_ranges()
     mpack_reader_destroy(&reader);
 }
 
+void test_msgpack_long_attribute_key()
+{
+    char key[512];
+    char *buffer;
+    size_t size;
+    size_t offset;
+    struct ctrace *ctx;
+    struct ctrace *decoded;
+    struct ctrace_resource_span *rs;
+    struct ctrace_scope_span *ss;
+    struct ctrace_span *span;
+    int result;
+
+    memset(key, 'k', sizeof(key) - 1);
+    key[sizeof(key) - 1] = '\0';
+
+    ctx = ctr_create(NULL);
+    rs = ctr_resource_span_create(ctx);
+    ss = ctr_scope_span_create(rs);
+    span = ctr_span_create(ctx, ss, "long-key", NULL);
+    TEST_ASSERT(ctr_span_set_attribute_string(span, key, "value") == 0);
+    TEST_ASSERT(ctr_encode_msgpack_create(ctx, &buffer, &size) == 0);
+
+    offset = 0;
+    result = ctr_decode_msgpack_create(&decoded, buffer, size, &offset);
+    TEST_ASSERT(result == 0);
+    rs = cfl_list_entry(decoded->resource_spans.next,
+                        struct ctrace_resource_span, _head);
+    ss = cfl_list_entry(rs->scope_spans.next, struct ctrace_scope_span, _head);
+    span = cfl_list_entry(ss->spans.next, struct ctrace_span, _head);
+    TEST_CHECK(cfl_kvlist_fetch(span->attr->kv, key) != NULL);
+
+    ctr_destroy(decoded);
+    ctr_encode_msgpack_destroy(buffer);
+    ctr_destroy(ctx);
+}
+
+void test_msgpack_variant_limits()
+{
+    char *buffer;
+    size_t size;
+    int index;
+    int result;
+    mpack_writer_t writer;
+    mpack_reader_t reader;
+    struct cfl_variant *variant;
+    struct cfl_kvlist *kvlist;
+
+    mpack_writer_init_growable(&writer, &buffer, &size);
+    for (index = 0; index < CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1; index++) {
+        mpack_start_array(&writer, 1);
+    }
+    mpack_write_i64(&writer, 1);
+    for (index = 0; index < CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1; index++) {
+        mpack_finish_array(&writer);
+    }
+    TEST_ASSERT(mpack_writer_destroy(&writer) == mpack_ok);
+
+    mpack_reader_init_data(&reader, buffer, size);
+    result = unpack_cfl_variant(&reader, &variant);
+    TEST_CHECK(result != 0);
+    mpack_reader_destroy(&reader);
+    free(buffer);
+
+    mpack_writer_init_growable(&writer, &buffer, &size);
+    mpack_start_map(&writer, 1);
+    mpack_write_cstr(&writer, "overflow");
+    mpack_write_u64(&writer, UINT64_MAX);
+    mpack_finish_map(&writer);
+    TEST_ASSERT(mpack_writer_destroy(&writer) == mpack_ok);
+
+    mpack_reader_init_data(&reader, buffer, size);
+    result = unpack_cfl_kvlist(&reader, &kvlist);
+    TEST_CHECK(result != 0);
+    mpack_reader_destroy(&reader);
+    free(buffer);
+}
+
 void test_simple_to_msgpack_and_back()
 {
     struct ctrace *ctx;
@@ -826,5 +905,7 @@ TEST_LIST = {
     {"msgpack_preserves_flags",         test_msgpack_preserves_flags},
     {"msgpack_invalid_offset",          test_msgpack_invalid_offset},
     {"msgpack_integer_ranges",          test_msgpack_integer_ranges},
+    {"msgpack_long_attribute_key",      test_msgpack_long_attribute_key},
+    {"msgpack_variant_limits",          test_msgpack_variant_limits},
     { 0 }
 };
