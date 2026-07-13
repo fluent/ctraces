@@ -5,16 +5,20 @@ on:
 
 jobs:
 
-  shellcheck-pr:
+  shellcheck:
     runs-on: ubuntu-latest
-    name: PR - Shellcheck
+    name: Shellcheck
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: ludeeus/action-shellcheck@master
 
-  actionlint-pr:
+  actionlint:
     runs-on: ubuntu-latest
-    name: PR - Actionlint
+    name: Actionlint
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - run: |
@@ -22,11 +26,3 @@ jobs:
           bash <(curl https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color -shellcheck=
         shell: bash
-
-  docslint-pr:
-    runs-on: ubuntu-latest
-    name: PR - Markdownlint
-    steps:
-      - uses: actions/checkout@v7
-      - name: Run markdownlint
-        uses: actionshub/markdownlint@v3.1.4

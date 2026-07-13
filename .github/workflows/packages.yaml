@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     name: build arm64 packages
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         format: [ rpm, deb ]
     steps:
       - uses: actions/checkout@v7
         with:
-            submodules: true
+          submodules: true
 
       - uses: uraimo/run-on-arch-action@v3.1.0
         name: Build the ${{matrix.format}} packages
@@ -48,14 +48,14 @@ jobs:
   build-distro-packages-amd64:
     name: build amd64 packages
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         format: [ rpm, deb ]
     runs-on: [ ubuntu-latest ]
     steps:
       - uses: actions/checkout@v7
         with:
-            submodules: true
+          submodules: true
 
       - name: Build the ${{matrix.format}} packages
         run:  |
