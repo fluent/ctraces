@@ -716,32 +716,75 @@ void test_msgpack_long_attribute_key()
     ctr_destroy(ctx);
 }
 
+static void check_variant_nesting_limit(int use_maps, size_t nesting_depth,
+                                        int expected_result)
+{
+    char *buffer;
+    size_t size;
+    size_t index;
+    int result;
+    mpack_writer_t writer;
+    mpack_reader_t reader;
+    struct cfl_variant *variant;
+
+    buffer = NULL;
+    size = 0;
+    variant = NULL;
+    mpack_writer_init_growable(&writer, &buffer, &size);
+
+    for (index = 0; index < nesting_depth; index++) {
+        if (use_maps) {
+            mpack_start_map(&writer, 1);
+            mpack_write_cstr(&writer, "key");
+        }
+        else {
+            mpack_start_array(&writer, 1);
+        }
+    }
+
+    mpack_write_i64(&writer, 1);
+
+    for (index = 0; index < nesting_depth; index++) {
+        if (use_maps) {
+            mpack_finish_map(&writer);
+        }
+        else {
+            mpack_finish_array(&writer);
+        }
+    }
+
+    TEST_ASSERT(mpack_writer_destroy(&writer) == mpack_ok);
+
+    mpack_reader_init_data(&reader, buffer, size);
+    result = unpack_cfl_variant(&reader, &variant);
+    TEST_CHECK((result == 0) == (expected_result == 0));
+
+    if (variant != NULL) {
+        cfl_variant_destroy(variant);
+    }
+
+    mpack_reader_destroy(&reader);
+    free(buffer);
+}
+
 void test_msgpack_variant_limits()
 {
     char *buffer;
     size_t size;
-    int index;
     int result;
     mpack_writer_t writer;
     mpack_reader_t reader;
     struct cfl_variant *variant;
     struct cfl_kvlist *kvlist;
 
-    mpack_writer_init_growable(&writer, &buffer, &size);
-    for (index = 0; index < CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1; index++) {
-        mpack_start_array(&writer, 1);
-    }
-    mpack_write_i64(&writer, 1);
-    for (index = 0; index < CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1; index++) {
-        mpack_finish_array(&writer);
-    }
-    TEST_ASSERT(mpack_writer_destroy(&writer) == mpack_ok);
-
-    mpack_reader_init_data(&reader, buffer, size);
-    result = unpack_cfl_variant(&reader, &variant);
-    TEST_CHECK(result != 0);
-    mpack_reader_destroy(&reader);
-    free(buffer);
+    check_variant_nesting_limit(CFL_FALSE,
+                                CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH, 0);
+    check_variant_nesting_limit(CFL_FALSE,
+                                CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1, -1);
+    check_variant_nesting_limit(CFL_TRUE,
+                                CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH, 0);
+    check_variant_nesting_limit(CFL_TRUE,
+                                CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH + 1, -1);
 
     mpack_writer_init_growable(&writer, &buffer, &size);
     mpack_start_map(&writer, 1);
