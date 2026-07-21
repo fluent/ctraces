@@ -27,7 +27,7 @@
 #define CFL_VARIANT_UTILS_INITIAL_ARRAY_SIZE          100
 #define CFL_VARIANT_UTILS_SERIALIZED_ARRAY_SIZE_LIMIT 100000
 #define CFL_VARIANT_UTILS_SERIALIZED_MAP_SIZE_LIMIT   100000
-#define CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH       64
+#define CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH       32
 #define CFL_VARIANT_UTILS_MAXIMUM_KEY_LENGTH           (1024 * 1000)
 
 /* These are the only functions meant for general use,
@@ -246,6 +246,10 @@ static inline int unpack_cfl_array_depth(mpack_reader_t *reader,
     size_t              index;
     mpack_tag_t         tag;
 
+    if (depth >= CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH) {
+        return -2;
+    }
+
     result = unpack_cfl_variant_read_tag(reader, &tag, mpack_type_array);
 
     if (result != 0) {
@@ -317,6 +321,10 @@ static inline int unpack_cfl_kvlist_depth(mpack_reader_t *reader,
     int                  result;
     size_t               index;
     mpack_tag_t          tag;
+
+    if (depth >= CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH) {
+        return -2;
+    }
 
     result = unpack_cfl_variant_read_tag(reader, &tag, mpack_type_map);
 
@@ -669,10 +677,6 @@ static inline int unpack_cfl_variant_depth(mpack_reader_t *reader,
     mpack_type_t value_type;
     int          result;
     mpack_tag_t  tag;
-
-    if (depth >= CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH) {
-        return -1;
-    }
 
     tag = mpack_peek_tag(reader);
 
