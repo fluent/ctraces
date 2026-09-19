@@ -18,12 +18,13 @@
  */
 
 #include <ctraces/ctraces.h>
+#include <ctraces/ctr_variant_utils.h>
 #include <cfl/cfl_array.h>
 #include <fluent-otel-proto/fluent-otel.h>
 
 static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
                              opentelemetry_decode_value_type value_type, char *key,
-                             Opentelemetry__Proto__Common__V1__AnyValue *val);
+                             Opentelemetry__Proto__Common__V1__AnyValue *val, size_t depth);
 
 static int convert_string_value(struct opentelemetry_decode_value *ctr_val,
                                 opentelemetry_decode_value_type value_type,
@@ -158,14 +159,15 @@ static int convert_double_value(struct opentelemetry_decode_value *ctr_val,
 
 static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
                                opentelemetry_decode_value_type value_type,
-                               char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr)
+                               char *key, Opentelemetry__Proto__Common__V1__ArrayValue *otel_arr,
+                               size_t depth)
 {
     int array_index;
     int result;
     struct opentelemetry_decode_value *ctr_arr_val;
     Opentelemetry__Proto__Common__V1__AnyValue *val;
 
-    if (otel_arr == NULL) {
+    if (depth >= CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH || otel_arr == NULL) {
         return -1;
     }
     if (otel_arr->n_values > 0 && otel_arr->values == NULL) {
@@ -193,7 +195,7 @@ static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
             /* skip malformed entry rather than failing the whole array */
             continue;
         }
-        result = convert_any_value(ctr_arr_val, CTR_OPENTELEMETRY_TYPE_ARRAY, NULL, val);
+        result = convert_any_value(ctr_arr_val, CTR_OPENTELEMETRY_TYPE_ARRAY, NULL, val, depth + 1);
     }
 
     if (result < 0) {
@@ -230,14 +232,15 @@ static int convert_array_value(struct opentelemetry_decode_value *ctr_val,
 
 static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
                                 opentelemetry_decode_value_type value_type,
-                                char *key, Opentelemetry__Proto__Common__V1__KeyValueList *otel_kvlist)
+                                char *key, Opentelemetry__Proto__Common__V1__KeyValueList *otel_kvlist,
+                                size_t depth)
 {
     int kvlist_index;
     int result;
     struct opentelemetry_decode_value *ctr_kvlist_val;
     Opentelemetry__Proto__Common__V1__KeyValue *kv;
 
-    if (otel_kvlist == NULL) {
+    if (depth >= CFL_VARIANT_UTILS_MAXIMUM_NESTING_DEPTH || otel_kvlist == NULL) {
         return -1;
     }
     if (otel_kvlist->n_values > 0 && otel_kvlist->values == NULL) {
@@ -267,7 +270,8 @@ static int convert_kvlist_value(struct opentelemetry_decode_value *ctr_val,
         if (kv == NULL || kv->key == NULL || kv->value == NULL) {
             continue;
         }
-        result = convert_any_value(ctr_kvlist_val, CTR_OPENTELEMETRY_TYPE_KVLIST, kv->key, kv->value);
+        result = convert_any_value(ctr_kvlist_val, CTR_OPENTELEMETRY_TYPE_KVLIST,
+                                   kv->key, kv->value, depth + 1);
     }
 
     if (result < 0){
@@ -335,7 +339,7 @@ static int convert_bytes_value(struct opentelemetry_decode_value *ctr_val,
 
 static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
                              opentelemetry_decode_value_type value_type, char *key,
-                             Opentelemetry__Proto__Common__V1__AnyValue *val)
+                             Opentelemetry__Proto__Common__V1__AnyValue *val, size_t depth)
 {
     int result;
 
@@ -371,11 +375,11 @@ static int convert_any_value(struct opentelemetry_decode_value *ctr_val,
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_ARRAY_VALUE:
-            result = convert_array_value(ctr_val, value_type, key, val->array_value);
+            result = convert_array_value(ctr_val, value_type, key, val->array_value, depth);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_KVLIST_VALUE:
-            result = convert_kvlist_value(ctr_val, value_type, key, val->kvlist_value);
+            result = convert_kvlist_value(ctr_val, value_type, key, val->kvlist_value, depth);
             break;
 
         case OPENTELEMETRY__PROTO__COMMON__V1__ANY_VALUE__VALUE_BYTES_VALUE:
@@ -442,7 +446,7 @@ static struct ctrace_attributes *convert_otel_attrs(size_t n_attributes,
 
         result = convert_any_value(ctr_decoded_attributes,
                                        CTR_OPENTELEMETRY_TYPE_ATTRIBUTE,
-                                       key, val);
+                                       key, val, 1);
     }
 
     if (result < 0) {
