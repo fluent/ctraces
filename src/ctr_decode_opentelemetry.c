@@ -17,6 +17,7 @@
  *  limitations under the License.
  */
 
+#include "ctr_protobuf.h"
 #include <ctraces/ctraces.h>
 #include <ctraces/ctr_variant_utils.h>
 #include <cfl/cfl_array.h>
@@ -644,6 +645,12 @@ int ctr_decode_opentelemetry_create(struct ctrace **out_ctr,
 
     if (*offset > in_size || (*offset == in_size && in_size != 0)) {
         return CTR_DECODE_OPENTELEMETRY_INSUFFICIENT_DATA;
+    }
+
+    if (ctr_protobuf_validate(
+            &opentelemetry__proto__collector__trace__v1__export_trace_service_request__descriptor,
+            &in_buf[*offset], in_size - *offset) != 0) {
+        return CTR_DECODE_OPENTELEMETRY_CORRUPTED_DATA;
     }
 
     service_request = opentelemetry__proto__collector__trace__v1__export_trace_service_request__unpack(NULL,
