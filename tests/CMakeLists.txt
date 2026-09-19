@@ -1,4 +1,5 @@
 set(UNIT_TESTS_FILES
+  variant_depth.c
   decoding.c
   basic.c
   span.c

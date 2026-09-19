@@ -694,7 +694,71 @@ void test_otlp_decode_invalid_kind()
     free(wire);
 }
 
+
+static void check_otlp_depth(size_t depth, int shape)
+{
+    struct ctrace *original;
+    struct ctrace *decoded;
+    struct ctrace_resource_span *resource;
+    struct cfl_variant *value;
+    struct cfl_variant *parent;
+    struct cfl_kvlist *map;
+    struct cfl_array *array;
+    cfl_sds_t wire;
+    size_t index;
+    size_t offset;
+    int result;
+
+    original = build_sample_trace();
+    TEST_ASSERT(original != NULL);
+    resource = cfl_list_entry(original->resource_spans.next, struct ctrace_resource_span, _head);
+    value = cfl_variant_create_from_string("leaf");
+    TEST_ASSERT(value != NULL);
+    for (index = 0; index < depth; index++) {
+        if (shape == 0 || (shape == 2 && index % 2 == 0)) {
+            map = cfl_kvlist_create();
+            TEST_ASSERT(map != NULL);
+            TEST_ASSERT(cfl_kvlist_insert(map, "k", value) == 0);
+            parent = cfl_variant_create_from_kvlist(map);
+        }
+        else {
+            array = cfl_array_create(1);
+            TEST_ASSERT(array != NULL);
+            TEST_ASSERT(cfl_array_append(array, value) == 0);
+            parent = cfl_variant_create_from_array(array);
+        }
+        TEST_ASSERT(parent != NULL);
+        value = parent;
+    }
+    TEST_ASSERT(cfl_kvlist_insert(resource->resource->attr->kv, "deep", value) == 0);
+    wire = ctr_encode_opentelemetry_create(original);
+    TEST_ASSERT(wire != NULL);
+    ctr_destroy(original);
+    decoded = NULL;
+    offset = 0;
+    result = ctr_decode_opentelemetry_create(&decoded,  wire,
+                                               cfl_sds_len(wire), &offset);
+    TEST_CHECK((result == 0) == (depth < 32));
+    if (decoded != NULL) {
+        ctr_destroy(decoded);
+    }
+    ctr_encode_opentelemetry_destroy(wire);
+}
+
+static void test_otlp_depth_boundary(void)
+{
+    int shape;
+
+    for (shape = 0; shape < 3; shape++) {
+        check_otlp_depth(8, shape);
+        check_otlp_depth(31, shape);
+        check_otlp_depth(32, shape);
+        check_otlp_depth(400, shape);
+    }
+}
+
 TEST_LIST = {
+    {"otlp_depth_boundary", test_otlp_depth_boundary},
     {"otlp_roundtrip",                  test_otlp_roundtrip},
     {"otlp_minimal_trace",              test_otlp_minimal_trace},
     {"otlp_empty_context",              test_otlp_empty_context},
